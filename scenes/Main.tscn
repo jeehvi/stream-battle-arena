@@ -19,3 +19,18 @@ text = "Stream Battle Arena"
 offset_left = 10.0
 offset_top = 30.0
 text = "FPS: 0"
+
+[node name="AliveLabel" type="Label" parent="CanvasLayer"]
+offset_left = 10.0
+offset_top = 50.0
+text = "Alive: 0 / 300"
+
+[node name="KillfeedContainer" type="VBoxContainer" parent="CanvasLayer"]
+anchor_left = 1.0
+anchor_top = 0.0
+anchor_right = 1.0
+anchor_bottom = 0.0
+offset_left = -300.0
+offset_top = 10.0
+alignment = 2
+
