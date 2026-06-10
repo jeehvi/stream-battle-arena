@@ -13,6 +13,7 @@ var showdown_overlay: Control
 var results_screen: Control
 var results_content: VBoxContainer
 var timer_label: Label
+var _match_duration_label: Label
 var _showdown_list: HBoxContainer
 var _showdown_col_left: VBoxContainer
 var _showdown_col_right: VBoxContainer
@@ -33,7 +34,7 @@ const PHASE_WAITING := 0
 const PHASE_TRANSITION := 1
 const PHASE_PLAYING := 2
 
-const BULLET_SPEED := 6.0
+const BULLET_SPEED := 1200.0
 const BULLET_RADIUS := 2.0
 const BULLET_CHANCE := 0.5
 
@@ -47,6 +48,8 @@ var _last_winner = null
 var _battle_time := 0.0
 var _speed_multiplier := 1.0
 var _boost_applied := false
+var _early_boost_duration := 0.0
+var _early_cd_mult := 1.0
 var _midgame_boosted := false
 var _killfeed_entries: Array = []
 var _global_ranking := {}
@@ -58,6 +61,9 @@ var _waiting_index := 0
 var _waiting_rate: float
 var _waiting_accum := 0.0
 var _waiting_config: Dictionary
+var _session_recorded := false
+var _initial_player_count := 0
+var _bullet_debug_timer := 0.0
 
 
 func _ready():
@@ -92,12 +98,57 @@ func _setup_ui():
 	content.anchor_top = 0.0
 	content.anchor_right = 1.0
 	content.anchor_bottom = 1.0
-	content.offset_left = 250.0
-	content.offset_right = -250.0
+	content.offset_left = 60.0
+	content.offset_right = -60.0
 	content.offset_top = 40.0
 	content.offset_bottom = -40.0
 	results_screen.add_child(content)
 	results_content = content
+
+	_match_duration_label = Label.new()
+	_match_duration_label.name = "MatchDurationLabel"
+	_match_duration_label.anchor_left = 1.0
+	_match_duration_label.anchor_top = 0.0
+	_match_duration_label.anchor_right = 1.0
+	_match_duration_label.anchor_bottom = 0.0
+	_match_duration_label.offset_left = -220.0
+	_match_duration_label.offset_right = -50.0
+	_match_duration_label.offset_top = 35.0
+	_match_duration_label.offset_bottom = 65.0
+	_match_duration_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	_match_duration_label.vertical_alignment = VERTICAL_ALIGNMENT_TOP
+	_match_duration_label.add_theme_font_size_override("font_size", 18)
+	results_screen.add_child(_match_duration_label)
+
+	var button_row = HBoxContainer.new()
+	button_row.name = "ActionButtons"
+	button_row.anchor_left = 0.5
+	button_row.anchor_top = 1.0
+	button_row.anchor_right = 0.5
+	button_row.anchor_bottom = 1.0
+	button_row.offset_left = -210.0
+	button_row.offset_top = -94.0
+	button_row.offset_right = 210.0
+	button_row.offset_bottom = -50.0
+	button_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	button_row.add_theme_constant_override("separation", 24)
+	results_screen.add_child(button_row)
+
+	var play_again = Button.new()
+	play_again.name = "PlayAgain"
+	play_again.text = "PLAY AGAIN"
+	play_again.custom_minimum_size = Vector2(190, 44)
+	play_again.add_theme_font_size_override("font_size", 20)
+	play_again.pressed.connect(_on_play_again)
+	button_row.add_child(play_again)
+
+	var back_menu = Button.new()
+	back_menu.name = "BackToMenu"
+	back_menu.text = "BACK TO MENU"
+	back_menu.custom_minimum_size = Vector2(190, 44)
+	back_menu.add_theme_font_size_override("font_size", 20)
+	back_menu.pressed.connect(_on_back_to_menu)
+	button_row.add_child(back_menu)
 
 	showdown_overlay = Control.new()
 	showdown_overlay.name = "ShowdownOverlay"
@@ -314,6 +365,7 @@ func _start_waiting_phase():
 	_waiting_rate = _waiting_remaining / float(_waiting_total)
 	_waiting_accum = 0.0
 	_waiting_config = BattleConfig.get_config(_waiting_total)
+	_global_ranking = GameSettings.global_ranking
 
 	_arena_size = _get_arena_size_for_count(_waiting_total)
 	var viewport = get_window().size
@@ -321,6 +373,7 @@ func _start_waiting_phase():
 	camera.zoom = Vector2(zoom, zoom)
 
 	_waiting_overlay.visible = true
+	alive_label.visible = false
 	_waiting_players.text = "0 joined"
 	_waiting_countdown.text = "Battle starts in %d" % GameSettings.waiting_duration
 	queue_redraw()
@@ -389,6 +442,8 @@ func _process(delta):
 				timer_label.visible = true
 				_phase = PHASE_PLAYING
 				_battle_time = 0.0
+				_initial_player_count = _get_player_count()
+				alive_label.visible = true
 				_grant_early_boost()
 				for child in get_children():
 					if not (child is CanvasLayer or child is Camera2D):
@@ -404,7 +459,7 @@ func _process(delta):
 			var seconds = int(_battle_time) % 60
 			timer_label.text = "%02d:%02d" % [minutes, seconds]
 
-			if _boost_applied and _battle_time >= 30.0:
+			if _boost_applied and _battle_time >= _early_boost_duration:
 				_revert_early_boost()
 
 			_update_state_timers(delta)
@@ -423,7 +478,7 @@ func _update_alive_count():
 			alive += 1
 			winner = child
 
-	alive_label.text = "Alive: %d / %d" % [alive, _get_player_count()]
+	alive_label.text = "Alive: %d / %d" % [alive, _initial_player_count]
 
 	if not _showdown_triggered and alive <= 10 and _battle_state == STATE_PLAYING:
 		_showdown_triggered = true
@@ -468,6 +523,11 @@ func _move_players(delta):
 			continue
 
 		child.update_direction(delta)
+
+		if _boost_applied and child.current_target != null and is_instance_valid(child.current_target) and child.current_target.is_alive:
+			var target_dir = (child.current_target.position - child.position).normalized()
+			child.direction = (child.direction * 0.7 + target_dir * 0.3).normalized()
+
 		child.position += child.direction * PLAYER_SPEED * _speed_multiplier * delta
 
 		if child.position.x < left:
@@ -492,19 +552,23 @@ func _move_players(delta):
 			child._attack_timer -= delta
 			if child._attack_timer <= 0.0 and child.current_target != null and is_instance_valid(child.current_target):
 				child._attack_timer = child.attack_cooldown
-				child.fire()
 				var victim = child.current_target
-				if randf() < BULLET_CHANCE:
+				if victim.is_alive and randf() < BULLET_CHANCE:
 					var dir = (victim.position - child.position).normalized()
-					var tip = child.position + dir * (10.0 + 10.0)
+					var tip = child.position + dir * 20.0
+					var dist = victim.position.distance_to(child.position)
+					var dur = clampf(dist / BULLET_SPEED, 0.08, 0.25)
 					_bullets.append({
-						start = tip,
-						end = victim.position,
-						progress = 0.0,
-						target = victim,
+						start_position = tip,
+						target_player = victim,
+						attacker = child,
 						damage = child.damage,
-						attacker = child
+						elapsed_time = 0.0,
+						duration = dur,
+						has_applied_damage = false
 					})
+					print("Bullet Created | shooter=%s target=%s dist=%.1f dur=%.3f" % [child.username, victim.username, dist, dur])
+					child.fire()
 			child.queue_redraw()
 
 
@@ -574,34 +638,54 @@ func _update_state_timers(delta):
 
 
 func _update_bullets(delta):
+	_bullet_debug_timer += delta
+	if _bullet_debug_timer >= 5.0:
+		_bullet_debug_timer = 0.0
+		print("Active bullets count: %d" % _bullets.size())
+
+	var modified := false
+
 	if _battle_state != STATE_PLAYING:
 		if _bullets.size() > 0:
+			print("Bullet Cleanup | reason=battle_end/showdown count=%d" % _bullets.size())
 			_bullets.clear()
+			modified = true
+		if modified:
 			queue_redraw()
 		return
 
 	for i in range(_bullets.size() - 1, -1, -1):
 		var b = _bullets[i]
-		b.progress += BULLET_SPEED * delta
 
-		var should_remove = false
-		if not is_instance_valid(b.target) or not b.target.is_alive:
-			should_remove = true
-		elif b.progress >= 1.0:
-			should_remove = true
-		else:
-			var target_pos = b.target.position
-			var pos = b.start.lerp(target_pos, b.progress)
-			if pos.distance_to(target_pos) < 8.0:
-				b.target.take_damage(b.damage, b.attacker)
-				if not b.target.is_alive:
-					_add_killfeed(b.attacker.username, b.target.username)
-				should_remove = true
-
-		if should_remove:
+		if not is_instance_valid(b.target_player):
+			print("Bullet Removed | reason=invalid_target target=invalid")
 			_bullets.remove_at(i)
+			modified = true
+			continue
 
-	if _bullets.size() > 0:
+		if not b.target_player.is_alive:
+			print("Bullet Removed | reason=target_dead target=%s" % b.target_player.username)
+			_bullets.remove_at(i)
+			modified = true
+			continue
+
+		b.elapsed_time += delta
+		var progress = clampf(b.elapsed_time / b.duration, 0.0, 1.0)
+		var bullet_pos = b.start_position.lerp(b.target_player.position, progress)
+
+		if progress >= 1.0:
+			if not b.has_applied_damage:
+				b.has_applied_damage = true
+				print("Bullet Impact | target=%s elapsed=%.3f" % [b.target_player.username, b.elapsed_time])
+				b.target_player.take_damage(b.damage, b.attacker)
+				if not b.target_player.is_alive:
+					_add_killfeed(b.attacker.username, b.target_player.username)
+			_bullets.remove_at(i)
+			modified = true
+		else:
+			b.position = bullet_pos
+
+	if modified or _bullets.size() > 0:
 		queue_redraw()
 
 
@@ -609,77 +693,149 @@ func _show_results(winner):
 	alive_label.visible = false
 	timer_label.visible = false
 
-	# Update global ranking first
+	if not _session_recorded:
+		_session_recorded = true
+		var all_players: Array = []
+		for child in get_children():
+			if child is CanvasLayer or child is Camera2D:
+				continue
+			all_players.append(child)
+		SessionStats.record_battle(all_players, winner)
+
 	_update_global_ranking(winner)
 
-	# Clear previous content
 	for child in results_content.get_children():
 		child.queue_free()
 
 	# Winner section
-	var title = _make_label("WINNER", 30)
-	title.add_theme_color_override("font_color", Color(1, 0.8, 0))
-	results_content.add_child(title)
+	var w_title = _make_label("WINNER", 30)
+	w_title.add_theme_color_override("font_color", Color(1, 0.8, 0))
+	results_content.add_child(w_title)
 
 	results_content.add_child(_make_label(winner.username, 22))
 
-	var duration_minutes = int(_battle_time) / 60
-	var duration_seconds = int(_battle_time) % 60
-	results_content.add_child(_make_label(
-		"Match Duration: %02d:%02d" % [duration_minutes, duration_seconds], 18
-	))
+	var dur_min = int(_battle_time) / 60
+	var dur_sec = int(_battle_time) % 60
+	_match_duration_label.text = "Match Duration: %02d:%02d" % [dur_min, dur_sec]
 
-	var victory_points = winner.kills + 10
-	results_content.add_child(_make_label("Kills this battle: %d" % winner.kills, 18))
-	results_content.add_child(_make_label("Points earned: %d" % victory_points, 18))
+	var vp = winner.kills + 10
+	results_content.add_child(_make_label("Kills this battle: %d" % winner.kills, 20))
+	results_content.add_child(_make_label("Points earned: %d" % vp, 20))
 
-	results_content.add_child(_make_label("", 16))  # spacer
+	results_content.add_child(_make_label("", 16))
 
-	# Top 5 kills
-	results_content.add_child(_make_label("--- Top 5 Kills ---", 18, Color(0.7, 0.7, 0.7)))
-
+	# Collect players and find MVP
 	var all_players: Array = []
 	for child in get_children():
 		if child is CanvasLayer or child is Camera2D:
 			continue
 		all_players.append(child)
 
+	var mvp = null
+	for p in all_players:
+		if mvp == null or p.kills > mvp.kills:
+			mvp = p
+
 	all_players.sort_custom(func(a, b): return a.kills > b.kills)
+
+	# Top session data
+	var top_pts = SessionStats.get_top_points(10)
+	var top_kills = SessionStats.get_top_kills(5)
+	var session_winners = SessionStats.get_session_winners()
+
+	# 2-column layout
+	var columns = HBoxContainer.new()
+	columns.add_theme_constant_override("separation", 24)
+	results_content.add_child(columns)
+
+	var col_left = VBoxContainer.new()
+	col_left.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	columns.add_child(col_left)
+
+	var col_right = VBoxContainer.new()
+	col_right.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	columns.add_child(col_right)
+
+	# ---- LEFT COLUMN: BATTLE STATS ----
+	col_left.add_child(_make_label("BATTLE STATS", 18, Color(0.6, 0.6, 0.6)))
+	col_left.add_child(_make_label("", 8))
+
+	# BATTLE MVP
+	col_left.add_child(_make_label("BATTLE MVP", 17, Color(1.0, 0.75, 0.2)))
+	col_left.add_child(_make_label("%s - %d kills" % [mvp.username, mvp.kills], 15))
+	col_left.add_child(_make_label("", 12))
+
+	# TOP KILLS THIS BATTLE
+	col_left.add_child(_make_label("TOP KILLS THIS BATTLE", 17, Color(0.7, 0.7, 0.7)))
 	for i in range(mini(5, all_players.size())):
 		var p = all_players[i]
-		results_content.add_child(_make_label(
-			"%d. %s - %d kills" % [i + 1, p.username, p.kills], 14
-		))
+		col_left.add_child(_make_label("%d. %s - %d kills" % [i + 1, p.username, p.kills], 14))
+	col_left.add_child(_make_label("", 12))
 
-	results_content.add_child(_make_label("", 8))
+	# KILL KINGS
+	col_left.add_child(_make_label("KILL KINGS", 17, Color(0.75, 0.4, 0.15)))
+	if top_kills.size() > 0:
+		for i in range(top_kills.size()):
+			var p = top_kills[i]
+			col_left.add_child(_make_label("%d. %s - %d kills" % [i + 1, p.username, p.entry.session_kills], 14))
 
-	# Global ranking top 10
-	results_content.add_child(_make_label("--- Global Ranking ---", 18, Color(0.7, 0.7, 0.7)))
+	# ---- RIGHT COLUMN: SESSION STATS ----
+	col_right.add_child(_make_label("SESSION STATS", 18, Color(0.6, 0.6, 0.6)))
+	col_right.add_child(_make_label("", 8))
 
-	var sorted_global: Array = []
-	for username in _global_ranking:
-		var entry = _global_ranking[username]
-		sorted_global.append({ username = username, entry = entry })
-	sorted_global.sort_custom(func(a, b): return a.entry.total_points > b.entry.total_points)
+	# SESSION LEADERBOARD
+	col_right.add_child(_make_label("SESSION LEADERBOARD", 17, Color(0.7, 0.7, 0.7)))
+	if top_pts.size() > 0:
+		var sl_scroll = ScrollContainer.new()
+		sl_scroll.custom_minimum_size = Vector2(0, min(220, top_pts.size() * 22))
+		col_right.add_child(sl_scroll)
+		var sl_list = VBoxContainer.new()
+		sl_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		sl_list.add_theme_constant_override("separation", 2)
+		sl_scroll.add_child(sl_list)
+		for i in range(top_pts.size()):
+			var p = top_pts[i]
+			var e = p.entry
+			sl_list.add_child(_make_label(
+				"%d. %s - %d pts | %d wins | %d kills" % [i + 1, p.username, e.session_points, e.session_wins, e.session_kills],
+				14
+			))
 
-	for i in range(mini(10, sorted_global.size())):
-		var g = sorted_global[i]
-		var e = g.entry
-		results_content.add_child(_make_label(
-			"%d. %s - %d pts (%d wins / %d games)" % [i + 1, g.username, e.total_points, e.wins, e.games_played],
-			14
-		))
+	col_right.add_child(_make_label("", 12))
+
+	# SESSION WINNERS
+	col_right.add_child(_make_label("SESSION WINNERS", 17, Color(0.7, 0.7, 0.7)))
+	if session_winners.size() > 0:
+		var sw_scroll = ScrollContainer.new()
+		sw_scroll.custom_minimum_size = Vector2(0, min(260, session_winners.size() * 22))
+		col_right.add_child(sw_scroll)
+		var sw_list = VBoxContainer.new()
+		sw_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		sw_list.add_theme_constant_override("separation", 2)
+		sw_scroll.add_child(sw_list)
+		for w in session_winners:
+			sw_list.add_child(_make_label("Battle %d: %s" % [w.battle_number, w.username], 14))
 
 	results_screen.visible = true
+	GameSettings.global_ranking = _global_ranking
 
 
 func _make_label(text: String, font_size: int, color: Color = Color.WHITE) -> Label:
 	var l = Label.new()
 	l.text = text
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	l.add_theme_font_size_override("font_size", font_size)
 	l.add_theme_color_override("font_color", color)
 	return l
+
+
+func _on_play_again():
+	get_tree().change_scene_to_file("res://scenes/Main.tscn")
+
+
+func _on_back_to_menu():
+	get_tree().change_scene_to_file("res://scenes/MainMenu.tscn")
 
 
 func _update_global_ranking(winner):
@@ -763,12 +919,34 @@ func _get_arena_size_for_count(count: int) -> float:
 
 
 func _grant_early_boost():
-	if _waiting_total < 300:
+	var count = _waiting_total
+	var cd_mult: float
+	var speed_mult: float
+
+	if count >= 300:
+		_early_boost_duration = 30.0
+		cd_mult = 0.55
+		speed_mult = 1.25
+	elif count >= 151:
+		_early_boost_duration = 40.0
+		cd_mult = 0.50
+		speed_mult = 1.30
+	elif count >= 51:
+		_early_boost_duration = 45.0
+		cd_mult = 0.45
+		speed_mult = 1.35
+	elif count >= 20:
+		_early_boost_duration = 45.0
+		cd_mult = 0.45
+		speed_mult = 1.40
+	else:
 		return
-	_speed_multiplier = 1.25
+
+	_early_cd_mult = cd_mult
+	_speed_multiplier = speed_mult
 	for child in get_children():
 		if not (child is CanvasLayer or child is Camera2D):
-			child.attack_cooldown *= 0.55
+			child.attack_cooldown *= cd_mult
 	_boost_applied = true
 
 
@@ -776,8 +954,10 @@ func _revert_early_boost():
 	_speed_multiplier = 1.0
 	for child in get_children():
 		if not (child is CanvasLayer or child is Camera2D):
-			child.attack_cooldown /= 0.55
+			child.attack_cooldown /= _early_cd_mult
 	_boost_applied = false
+	_early_boost_duration = 0.0
+	_early_cd_mult = 1.0
 
 
 func _update_username_visibility():
@@ -795,5 +975,4 @@ func _draw():
 
 	# Visual-only bullets
 	for b in _bullets:
-		var pos = b.start.lerp(b.end, b.progress)
-		draw_circle(pos, BULLET_RADIUS, Color(1.0, 0.7, 0.0))
+		draw_circle(b.position, BULLET_RADIUS, Color(1.0, 0.7, 0.0))

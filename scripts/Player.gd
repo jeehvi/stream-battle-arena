@@ -13,6 +13,7 @@ var player_color: Color:
 
 const RADIUS := 10.0
 const CANNON_LENGTH := 10.0
+const HIT_TOLERANCE := 6.0
 
 var _username_label: Label
 var normalized_position := Vector2.ZERO
@@ -63,6 +64,10 @@ func setup_combat(config: Dictionary):
 	health = max_health
 	damage = config["damage"]
 	attack_cooldown = config["attack_cooldown"]
+
+
+func get_hit_radius() -> float:
+	return RADIUS + CANNON_LENGTH + HIT_TOLERANCE
 
 
 func fire():

@@ -32,3 +32,4 @@ rendering_device/driver.windows="d3d12"
 [autoload]
 
 GameSettings="*res://data/GameSettings.gd"
+SessionStats="*res://scripts/SessionStats.gd"
