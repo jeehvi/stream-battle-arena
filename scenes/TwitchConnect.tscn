@@ -1,6 +1,192 @@
-[gd_scene format=3]
+[gd_scene load_steps=4 format=3 uid="uid://c1wn6gd2j2xhk"]
 
 [ext_resource type="Script" path="res://scripts/TwitchConnect.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/ui/SafeArea.gd" id="2"]
+[ext_resource type="Script" path="res://scripts/ui/StyledButton.gd" id="3"]
 
 [node name="TwitchConnect" type="Control"]
 script = ExtResource("1")
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="CustomBackground" type="ColorRect" parent="."]
+color = Color(0.0549, 0.0549, 0.0549, 1)
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
+
+[node name="GoldGlow" type="TextureRect" parent="."]
+unique_name_in_owner = true
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+stretch_mode = 6
+mouse_filter = 2
+
+[node name="SafeArea" type="MarginContainer" parent="."]
+unique_name_in_owner = true
+script = ExtResource("2")
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="MainLayout" type="VBoxContainer" parent="SafeArea"]
+unique_name_in_owner = true
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+alignment = 0
+
+[node name="TopSpacer" type="Control" parent="SafeArea/MainLayout"]
+unique_name_in_owner = true
+mouse_filter = 2
+
+[node name="BannerSection" type="VBoxContainer" parent="SafeArea/MainLayout"]
+unique_name_in_owner = true
+alignment = 0
+size_flags_horizontal = 3
+
+[node name="SwordIcon" type="TextureRect" parent="SafeArea/MainLayout/BannerSection"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(64, 64)
+stretch_mode = 5
+expand_mode = 3
+size_flags_horizontal = 4
+size_flags_vertical = 4
+mouse_filter = 2
+
+[node name="SpST" type="Control" parent="SafeArea/MainLayout/BannerSection"]
+unique_name_in_owner = true
+mouse_filter = 2
+
+[node name="TitleLabel" type="Label" parent="SafeArea/MainLayout/BannerSection"]
+unique_name_in_owner = true
+text = "STREAM BATTLE"
+horizontal_alignment = 1
+autowrap_mode = 0
+size_flags_horizontal = 3
+
+[node name="SpTA" type="Control" parent="SafeArea/MainLayout/BannerSection"]
+unique_name_in_owner = true
+mouse_filter = 2
+
+[node name="ArenaLabel" type="Label" parent="SafeArea/MainLayout/BannerSection"]
+unique_name_in_owner = true
+text = "A R E N A"
+horizontal_alignment = 1
+autowrap_mode = 0
+size_flags_horizontal = 3
+
+[node name="SpAD" type="Control" parent="SafeArea/MainLayout/BannerSection"]
+unique_name_in_owner = true
+mouse_filter = 2
+
+[node name="GoldDivider" type="Control" parent="SafeArea/MainLayout/BannerSection"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(200, 16)
+size_flags_horizontal = 4
+mouse_filter = 2
+
+[node name="SpDT" type="Control" parent="SafeArea/MainLayout/BannerSection"]
+unique_name_in_owner = true
+mouse_filter = 2
+
+[node name="TaglineLabel" type="Label" parent="SafeArea/MainLayout/BannerSection"]
+unique_name_in_owner = true
+text = "T W I T C H  V I E W E R  B A T T L E  R O Y A L E"
+horizontal_alignment = 1
+autowrap_mode = 0
+size_flags_horizontal = 4
+
+[node name="BannerToCardSpacer" type="Control" parent="SafeArea/MainLayout"]
+unique_name_in_owner = true
+mouse_filter = 2
+
+[node name="AuthSection" type="Control" parent="SafeArea/MainLayout"]
+unique_name_in_owner = true
+size_flags_horizontal = 3
+size_flags_vertical = 4
+mouse_filter = 2
+
+[node name="CardCenter" type="CenterContainer" parent="SafeArea/MainLayout/AuthSection"]
+unique_name_in_owner = true
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="AuthCard" type="Panel" parent="SafeArea/MainLayout/AuthSection/CardCenter"]
+unique_name_in_owner = true
+mouse_filter = 1
+
+[node name="CardContent" type="VBoxContainer" parent="SafeArea/MainLayout/AuthSection/CardCenter/AuthCard"]
+unique_name_in_owner = true
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+alignment = 1
+size_flags_horizontal = 3
+
+[node name="AuthTitle" type="Label" parent="SafeArea/MainLayout/AuthSection/CardCenter/AuthCard/CardContent"]
+unique_name_in_owner = true
+text = "AUTHENTICATION"
+horizontal_alignment = 1
+autowrap_mode = 0
+size_flags_horizontal = 4
+
+[node name="AuthDivider" type="ColorRect" parent="SafeArea/MainLayout/AuthSection/CardCenter/AuthCard/CardContent"]
+unique_name_in_owner = true
+color = Color(0.831, 0.686, 0.216, 1)
+custom_minimum_size = Vector2(120, 1)
+size_flags_horizontal = 4
+
+[node name="TwitchRow" type="HBoxContainer" parent="SafeArea/MainLayout/AuthSection/CardCenter/AuthCard/CardContent"]
+unique_name_in_owner = true
+alignment = 1
+size_flags_horizontal = 4
+
+[node name="TwitchIcon" type="TextureRect" parent="SafeArea/MainLayout/AuthSection/CardCenter/AuthCard/CardContent/TwitchRow"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(24, 24)
+stretch_mode = 5
+expand_mode = 3
+size_flags_vertical = 4
+mouse_filter = 2
+
+[node name="TwitchTitle" type="Label" parent="SafeArea/MainLayout/AuthSection/CardCenter/AuthCard/CardContent/TwitchRow"]
+unique_name_in_owner = true
+text = "Connect with Twitch"
+autowrap_mode = 0
+size_flags_vertical = 4
+
+[node name="DescriptionLabel" type="Label" parent="SafeArea/MainLayout/AuthSection/CardCenter/AuthCard/CardContent"]
+unique_name_in_owner = true
+text = "Sign in with your Twitch account to enter the arena."
+horizontal_alignment = 1
+autowrap_mode = 0
+size_flags_horizontal = 4
+
+[node name="ButtonCenter" type="CenterContainer" parent="SafeArea/MainLayout/AuthSection/CardCenter/AuthCard/CardContent"]
+unique_name_in_owner = true
+size_flags_horizontal = 3
+
+[node name="ConnectButton" type="Button" parent="SafeArea/MainLayout/AuthSection/CardCenter/AuthCard/CardContent/ButtonCenter"]
+unique_name_in_owner = true
+script = ExtResource("3")
+text = "CONNECT TWITCH"
+
+[node name="StatusLabel" type="Label" parent="SafeArea/MainLayout/AuthSection/CardCenter/AuthCard/CardContent"]
+unique_name_in_owner = true
+text = "Not connected to Twitch"
+horizontal_alignment = 1
+autowrap_mode = 0
+size_flags_horizontal = 4
+
+[node name="ContinueButton" type="Button" parent="SafeArea/MainLayout/AuthSection/CardCenter/AuthCard/CardContent"]
+unique_name_in_owner = true
+script = ExtResource("3")
+text = "CONTINUE"
+custom_minimum_size = Vector2(200, 0)
+visible = false
+size_flags_horizontal = 4

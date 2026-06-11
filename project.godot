@@ -11,9 +11,14 @@ config_version=5
 [application]
 
 config/name="StreamBattleArena"
+run/main_scene="res://scenes/TwitchConnect.tscn"
 config/features=PackedStringArray("4.6", "Forward Plus")
 config/icon="res://icon.svg"
-run/main_scene="res://scenes/TwitchConnect.tscn"
+
+[autoload]
+
+GameSettings="*res://data/GameSettings.gd"
+SessionStats="*res://scripts/SessionStats.gd"
 
 [display]
 
@@ -28,8 +33,3 @@ window/size/mode=2
 [rendering]
 
 rendering_device/driver.windows="d3d12"
-
-[autoload]
-
-GameSettings="*res://data/GameSettings.gd"
-SessionStats="*res://scripts/SessionStats.gd"

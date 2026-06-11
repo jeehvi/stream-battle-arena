@@ -1,5 +1,9 @@
 extends Node2D
 
+const StyledButton = preload("res://scripts/ui/StyledButton.gd")
+const ScreenBackground = preload("res://scripts/ui/ScreenBackground.gd")
+const SafeArea = preload("res://scripts/ui/SafeArea.gd")
+
 const SCREEN_PADDING := 80.0
 const PLAYER_SPEED := 60.0
 
@@ -67,12 +71,23 @@ var _session_recorded := false
 var _initial_player_count := 0
 var _bullet_debug_timer := 0.0
 
+var _trophy_texture: Texture2D
+var _hourglass_texture: Texture2D
+var _bangers_font: Font
+
 
 func _ready():
+	_load_textures()
 	camera.global_position = Vector2.ZERO
 	get_viewport().size_changed.connect(_on_viewport_resized)
 	_setup_ui()
 	_start_waiting_phase()
+
+
+func _load_textures():
+	_trophy_texture = load("res://assets/ui/icons/trophy.svg")
+	_hourglass_texture = load("res://assets/ui/icons/hourglass.svg")
+	_bangers_font = load("res://assets/fonts/Bangers-Regular.ttf")
 
 
 func _setup_ui():
@@ -85,14 +100,18 @@ func _setup_ui():
 	results_screen.anchor_bottom = 1.0
 	canvas_layer.add_child(results_screen)
 
-	var bg = ColorRect.new()
+	var bg = ScreenBackground.new()
 	bg.name = "Background"
-	bg.anchor_left = 0.0
-	bg.anchor_top = 0.0
-	bg.anchor_right = 1.0
-	bg.anchor_bottom = 1.0
-	bg.color = Color(0, 0, 0, 0.85)
+	bg.modulate = Color(1, 1, 1, 0.85)
 	results_screen.add_child(bg)
+
+	var safe_area = SafeArea.new()
+	safe_area.name = "SafeArea"
+	safe_area.anchor_left = 0.0
+	safe_area.anchor_top = 0.0
+	safe_area.anchor_right = 1.0
+	safe_area.anchor_bottom = 1.0
+	results_screen.add_child(safe_area)
 
 	var content = VBoxContainer.new()
 	content.name = "Content"
@@ -100,27 +119,36 @@ func _setup_ui():
 	content.anchor_top = 0.0
 	content.anchor_right = 1.0
 	content.anchor_bottom = 1.0
-	content.offset_left = 60.0
-	content.offset_right = -60.0
-	content.offset_top = 40.0
-	content.offset_bottom = -40.0
-	results_screen.add_child(content)
+	safe_area.add_child(content)
 	results_content = content
+
+	var match_duration_row = HBoxContainer.new()
+	match_duration_row.name = "MatchDurationRow"
+	match_duration_row.anchor_left = 1.0
+	match_duration_row.anchor_top = 0.0
+	match_duration_row.anchor_right = 1.0
+	match_duration_row.anchor_bottom = 0.0
+	match_duration_row.offset_left = -320.0
+	match_duration_row.offset_right = -80.0
+	match_duration_row.offset_top = 60.0
+	match_duration_row.offset_bottom = 90.0
+	match_duration_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	match_duration_row.add_theme_constant_override("separation", 6)
+	results_screen.add_child(match_duration_row)
+
+	var hourglass_icon = TextureRect.new()
+	hourglass_icon.name = "HourglassIcon"
+	hourglass_icon.texture = _hourglass_texture
+	hourglass_icon.custom_minimum_size = Vector2(24, 24)
+	hourglass_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	match_duration_row.add_child(hourglass_icon)
 
 	_match_duration_label = Label.new()
 	_match_duration_label.name = "MatchDurationLabel"
-	_match_duration_label.anchor_left = 1.0
-	_match_duration_label.anchor_top = 0.0
-	_match_duration_label.anchor_right = 1.0
-	_match_duration_label.anchor_bottom = 0.0
-	_match_duration_label.offset_left = -220.0
-	_match_duration_label.offset_right = -50.0
-	_match_duration_label.offset_top = 35.0
-	_match_duration_label.offset_bottom = 65.0
 	_match_duration_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	_match_duration_label.vertical_alignment = VERTICAL_ALIGNMENT_TOP
 	_match_duration_label.add_theme_font_size_override("font_size", 18)
-	results_screen.add_child(_match_duration_label)
+	match_duration_row.add_child(_match_duration_label)
 
 	var button_row = HBoxContainer.new()
 	button_row.name = "ActionButtons"
@@ -129,26 +157,22 @@ func _setup_ui():
 	button_row.anchor_right = 0.5
 	button_row.anchor_bottom = 1.0
 	button_row.offset_left = -210.0
-	button_row.offset_top = -94.0
+	button_row.offset_top = -100.0
 	button_row.offset_right = 210.0
-	button_row.offset_bottom = -50.0
+	button_row.offset_bottom = -60.0
 	button_row.alignment = BoxContainer.ALIGNMENT_CENTER
 	button_row.add_theme_constant_override("separation", 24)
 	results_screen.add_child(button_row)
 
-	var play_again = Button.new()
+	var play_again = StyledButton.new()
 	play_again.name = "PlayAgain"
 	play_again.text = "PLAY AGAIN"
-	play_again.custom_minimum_size = Vector2(190, 44)
-	play_again.add_theme_font_size_override("font_size", 20)
 	play_again.pressed.connect(_on_play_again)
 	button_row.add_child(play_again)
 
-	var back_menu = Button.new()
+	var back_menu = StyledButton.new()
 	back_menu.name = "BackToMenu"
 	back_menu.text = "BACK TO MENU"
-	back_menu.custom_minimum_size = Vector2(190, 44)
-	back_menu.add_theme_font_size_override("font_size", 20)
 	back_menu.pressed.connect(_on_back_to_menu)
 	button_row.add_child(back_menu)
 
@@ -161,13 +185,9 @@ func _setup_ui():
 	showdown_overlay.anchor_bottom = 1.0
 	canvas_layer.add_child(showdown_overlay)
 
-	var sd_bg = ColorRect.new()
+	var sd_bg = ScreenBackground.new()
 	sd_bg.name = "Background"
-	sd_bg.anchor_left = 0.0
-	sd_bg.anchor_top = 0.0
-	sd_bg.anchor_right = 1.0
-	sd_bg.anchor_bottom = 1.0
-	sd_bg.color = Color(0, 0, 0, 0.65)
+	sd_bg.modulate = Color(1, 1, 1, 0.65)
 	showdown_overlay.add_child(sd_bg)
 
 	var sd_content = VBoxContainer.new()
@@ -189,6 +209,7 @@ func _setup_ui():
 	sd_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	sd_title.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	sd_title.add_theme_font_size_override("font_size", 56)
+	sd_title.add_theme_font_override("font", _bangers_font)
 	sd_content.add_child(sd_title)
 
 	_showdown_subtitle = Label.new()
@@ -241,13 +262,9 @@ func _setup_ui():
 	_waiting_overlay.anchor_bottom = 1.0
 	canvas_layer.add_child(_waiting_overlay)
 
-	var wt_bg = ColorRect.new()
+	var wt_bg = ScreenBackground.new()
 	wt_bg.name = "Background"
-	wt_bg.anchor_left = 0.0
-	wt_bg.anchor_top = 0.0
-	wt_bg.anchor_right = 1.0
-	wt_bg.anchor_bottom = 1.0
-	wt_bg.color = Color(0, 0, 0, 0.45)
+	wt_bg.modulate = Color(1, 1, 1, 0.45)
 	_waiting_overlay.add_child(wt_bg)
 
 	_waiting_title = Label.new()
@@ -719,10 +736,31 @@ func _show_results(winner):
 	for child in results_content.get_children():
 		child.queue_free()
 
-	# Winner section
+	# Winner section with trophies
+	var winner_row = HBoxContainer.new()
+	winner_row.name = "WinnerRow"
+	winner_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	winner_row.add_theme_constant_override("separation", 12)
+	results_content.add_child(winner_row)
+
+	var trophy_left = TextureRect.new()
+	trophy_left.name = "TrophyLeft"
+	trophy_left.texture = _trophy_texture
+	trophy_left.custom_minimum_size = Vector2(48, 48)
+	trophy_left.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	winner_row.add_child(trophy_left)
+
 	var w_title = _make_label("WINNER", 30)
 	w_title.add_theme_color_override("font_color", Color(1, 0.8, 0))
-	results_content.add_child(w_title)
+	w_title.add_theme_font_override("font", _bangers_font)
+	winner_row.add_child(w_title)
+
+	var trophy_right = TextureRect.new()
+	trophy_right.name = "TrophyRight"
+	trophy_right.texture = _trophy_texture
+	trophy_right.custom_minimum_size = Vector2(48, 48)
+	trophy_right.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	winner_row.add_child(trophy_right)
 
 	results_content.add_child(_make_label(winner.username, 22))
 
@@ -769,7 +807,9 @@ func _show_results(winner):
 	columns.add_child(col_right)
 
 	# ---- LEFT COLUMN: BATTLE STATS ----
-	col_left.add_child(_make_label("BATTLE STATS", 18, Color(0.6, 0.6, 0.6)))
+	var bs_title = _make_label("BATTLE STATS", 18, Color(0.6, 0.6, 0.6))
+	bs_title.add_theme_font_override("font", _bangers_font)
+	col_left.add_child(bs_title)
 	col_left.add_child(_make_label("", 8))
 
 	# BATTLE MVP
@@ -792,7 +832,9 @@ func _show_results(winner):
 			col_left.add_child(_make_label("%d. %s - %d kills" % [i + 1, p.username, p.entry.session_kills], 14))
 
 	# ---- RIGHT COLUMN: SESSION STATS ----
-	col_right.add_child(_make_label("SESSION STATS", 18, Color(0.6, 0.6, 0.6)))
+	var ss_title = _make_label("SESSION STATS", 18, Color(0.6, 0.6, 0.6))
+	ss_title.add_theme_font_override("font", _bangers_font)
+	col_right.add_child(ss_title)
 	col_right.add_child(_make_label("", 8))
 
 	# SESSION LEADERBOARD

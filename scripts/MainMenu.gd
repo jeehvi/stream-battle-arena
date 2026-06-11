@@ -1,5 +1,8 @@
 extends Control
 
+const StyledButton = preload("res://scripts/ui/StyledButton.gd")
+const ScreenBackground = preload("res://scripts/ui/ScreenBackground.gd")
+
 const LABEL_WIDTH := 180
 const INPUT_WIDTH := 250
 const ROW_HEIGHT := 36
@@ -19,6 +22,10 @@ func _setup_ui():
 	anchor_top = 0.0
 	anchor_right = 1.0
 	anchor_bottom = 1.0
+
+	var bg = ScreenBackground.new()
+	bg.name = "Background"
+	add_child(bg)
 
 	var container = VBoxContainer.new()
 	container.name = "Container"
@@ -54,11 +61,10 @@ func _setup_ui():
 
 	container.add_child(_make_spacer(32))
 
-	var start_btn = Button.new()
+	var start_btn = StyledButton.new()
 	start_btn.name = "StartButton"
 	start_btn.text = "START BATTLE"
-	start_btn.custom_minimum_size = Vector2(350, 56)
-	start_btn.add_theme_font_size_override("font_size", 26)
+	start_btn.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	start_btn.pressed.connect(_on_start_pressed)
 	container.add_child(start_btn)
 
