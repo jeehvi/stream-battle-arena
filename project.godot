@@ -13,7 +13,7 @@ config_version=5
 config/name="StreamBattleArena"
 config/features=PackedStringArray("4.6", "Forward Plus")
 config/icon="res://icon.svg"
-run/main_scene="res://scenes/MainMenu.tscn"
+run/main_scene="res://scenes/TwitchConnect.tscn"
 
 [display]
 

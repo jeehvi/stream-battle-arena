@@ -17,6 +17,7 @@ var _match_duration_label: Label
 var _showdown_list: HBoxContainer
 var _showdown_col_left: VBoxContainer
 var _showdown_col_right: VBoxContainer
+var _showdown_subtitle: Label
 var _arena_size: float = 1000.0
 
 var _waiting_overlay: Control
@@ -44,6 +45,7 @@ var _game_over := false
 var _battle_state := STATE_PLAYING
 var _state_timer := 0.0
 var _showdown_triggered := false
+var _showdown_threshold := 10
 var _last_winner = null
 var _battle_time := 0.0
 var _speed_multiplier := 1.0
@@ -188,6 +190,14 @@ func _setup_ui():
 	sd_title.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	sd_title.add_theme_font_size_override("font_size", 56)
 	sd_content.add_child(sd_title)
+
+	_showdown_subtitle = Label.new()
+	_showdown_subtitle.name = "Subtitle"
+	_showdown_subtitle.text = ""
+	_showdown_subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_showdown_subtitle.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_showdown_subtitle.add_theme_font_size_override("font_size", 32)
+	sd_content.add_child(_showdown_subtitle)
 
 	_showdown_list = HBoxContainer.new()
 	_showdown_list.name = "PlayerList"
@@ -443,6 +453,7 @@ func _process(delta):
 				_phase = PHASE_PLAYING
 				_battle_time = 0.0
 				_initial_player_count = _get_player_count()
+				_showdown_threshold = 5 if _initial_player_count < 50 else 10
 				alive_label.visible = true
 				_grant_early_boost()
 				for child in get_children():
@@ -480,10 +491,11 @@ func _update_alive_count():
 
 	alive_label.text = "Alive: %d / %d" % [alive, _initial_player_count]
 
-	if not _showdown_triggered and alive <= 10 and _battle_state == STATE_PLAYING:
+	if not _showdown_triggered and alive <= _showdown_threshold and _battle_state == STATE_PLAYING:
 		_showdown_triggered = true
 		_battle_state = STATE_SHOWDOWN_PAUSE
 		_state_timer = 5.0
+		_showdown_subtitle.text = "TOP %d REMAINING" % _showdown_threshold
 		_populate_showdown_list()
 		showdown_overlay.visible = true
 
