@@ -1,5 +1,8 @@
 extends Node2D
 
+const SettingsIcon = preload("res://scripts/ui/SettingsIcon.gd")
+const SettingsPanel = preload("res://scripts/ui/SettingsPanel.gd")
+
 @onready var camera: Camera2D = $Camera2D
 @onready var canvas: CanvasLayer = $CanvasLayer
 
@@ -104,6 +107,19 @@ func _setup_ui():
 	_player_count_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	_player_count_label.add_theme_font_size_override("font_size", 28)
 	canvas.add_child(_player_count_label)
+
+	_add_settings_icon()
+
+
+func _add_settings_icon():
+	var icon = SettingsIcon.new()
+	icon.name = "SettingsIcon"
+	icon.pressed.connect(
+		func():
+			var panel = SettingsPanel.new()
+			canvas.add_child(panel)
+	)
+	canvas.add_child(icon)
 
 
 func _process(delta):

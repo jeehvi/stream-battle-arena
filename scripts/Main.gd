@@ -3,6 +3,9 @@ extends Node2D
 const StyledButton = preload("res://scripts/ui/StyledButton.gd")
 const ScreenBackground = preload("res://scripts/ui/ScreenBackground.gd")
 const SafeArea = preload("res://scripts/ui/SafeArea.gd")
+const SettingsIcon = preload("res://scripts/ui/SettingsIcon.gd")
+const SettingsPanel = preload("res://scripts/ui/SettingsPanel.gd")
+const ConfirmDialog = preload("res://scripts/ui/ConfirmDialog.gd")
 
 const SCREEN_PADDING := 80.0
 const PLAYER_SPEED := 60.0
@@ -74,6 +77,9 @@ var _bullet_debug_timer := 0.0
 var _trophy_texture: Texture2D
 var _hourglass_texture: Texture2D
 var _bangers_font: Font
+
+var _paused := false
+var _pause_overlay: Control
 
 
 func _ready():
@@ -175,6 +181,15 @@ func _setup_ui():
 	back_menu.text = "BACK TO MENU"
 	back_menu.pressed.connect(_on_back_to_menu)
 	button_row.add_child(back_menu)
+
+	var rs_icon = SettingsIcon.new()
+	rs_icon.name = "ResultsSettingsIcon"
+	rs_icon.pressed.connect(
+		func():
+			var panel = SettingsPanel.new()
+			canvas_layer.add_child(panel)
+	)
+	results_screen.add_child(rs_icon)
 
 	showdown_overlay = Control.new()
 	showdown_overlay.name = "ShowdownOverlay"
@@ -348,6 +363,132 @@ func _setup_ui():
 	_transition_label.add_theme_font_size_override("font_size", 56)
 	canvas_layer.add_child(_transition_label)
 
+	# ---------- PAUSE OVERLAY ----------
+	_pause_overlay = Control.new()
+	_pause_overlay.name = "PauseOverlay"
+	_pause_overlay.visible = false
+	_pause_overlay.anchor_left = 0.0
+	_pause_overlay.anchor_top = 0.0
+	_pause_overlay.anchor_right = 1.0
+	_pause_overlay.anchor_bottom = 1.0
+	canvas_layer.add_child(_pause_overlay)
+
+	var pdim = ColorRect.new()
+	pdim.name = "Dim"
+	pdim.anchor_left = 0.0
+	pdim.anchor_top = 0.0
+	pdim.anchor_right = 1.0
+	pdim.anchor_bottom = 1.0
+	pdim.color = Color(0, 0, 0, 0.65)
+	_pause_overlay.add_child(pdim)
+
+	var pcenter = VBoxContainer.new()
+	pcenter.name = "Center"
+	pcenter.anchor_left = 0.5
+	pcenter.anchor_top = 0.5
+	pcenter.anchor_right = 0.5
+	pcenter.anchor_bottom = 0.5
+	pcenter.offset_left = -200.0
+	pcenter.offset_top = -180.0
+	pcenter.offset_right = 200.0
+	pcenter.offset_bottom = 180.0
+	pcenter.alignment = BoxContainer.ALIGNMENT_CENTER
+	pcenter.add_theme_constant_override("separation", 0)
+	_pause_overlay.add_child(pcenter)
+
+	var ptitle = Label.new()
+	ptitle.name = "PauseTitle"
+	ptitle.text = "PAUSED"
+	ptitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	ptitle.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	ptitle.add_theme_font_size_override("font_size", 56)
+	ptitle.custom_minimum_size = Vector2(0, 80)
+	pcenter.add_child(ptitle)
+
+	pcenter.add_child(_pspacer(28))
+
+	var presume_btn = StyledButton.new()
+	presume_btn.name = "ResumeButton"
+	presume_btn.text = "RESUME BATTLE"
+	presume_btn.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	presume_btn.pressed.connect(_resume_battle)
+	pcenter.add_child(presume_btn)
+
+	pcenter.add_child(_pspacer(10))
+
+	var psettings_btn = StyledButton.new()
+	psettings_btn.name = "PauseSettingsButton"
+	psettings_btn.text = "SETTINGS"
+	psettings_btn.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	psettings_btn.pressed.connect(
+		func():
+			var panel = SettingsPanel.new()
+			canvas_layer.add_child(panel)
+	)
+	pcenter.add_child(psettings_btn)
+
+	pcenter.add_child(_pspacer(10))
+
+	var pmenu_btn = StyledButton.new()
+	pmenu_btn.name = "MainMenuButton"
+	pmenu_btn.text = "MAIN MENU"
+	pmenu_btn.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	pmenu_btn.pressed.connect(_on_pause_main_menu)
+	pcenter.add_child(pmenu_btn)
+
+	pcenter.add_child(_pspacer(10))
+
+	var pexit_btn = StyledButton.new()
+	pexit_btn.name = "PauseExitButton"
+	pexit_btn.text = "EXIT GAME"
+	pexit_btn.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	pexit_btn.pressed.connect(_on_pause_exit)
+	pcenter.add_child(pexit_btn)
+
+
+func _pause_battle():
+	_paused = true
+	_pause_overlay.visible = true
+
+
+func _resume_battle():
+	_paused = false
+	_pause_overlay.visible = false
+
+
+func _on_pause_main_menu():
+	var dialog = ConfirmDialog.new()
+	dialog.setup("RETURN TO MAIN MENU", "Current battle progress will be lost.")
+	dialog.confirmed.connect(
+		func():
+			get_tree().change_scene_to_file("res://scenes/MainMenu.tscn")
+	)
+	canvas_layer.add_child(dialog)
+
+
+func _on_pause_exit():
+	var dialog = ConfirmDialog.new()
+	dialog.setup("EXIT GAME", "Are you sure you want to exit?")
+	dialog.confirmed.connect(get_tree().quit)
+	canvas_layer.add_child(dialog)
+
+
+func _pspacer(height: int) -> Control:
+	var s = Control.new()
+	s.custom_minimum_size = Vector2(0, height)
+	return s
+
+
+func _unhandled_input(event):
+	if event is InputEventKey and event.pressed and event.keycode == KEY_ESCAPE:
+		get_viewport().set_input_as_handled()
+		if results_screen.visible:
+			return
+		if _paused:
+			_resume_battle()
+		elif _phase == PHASE_PLAYING:
+			_pause_battle()
+
 
 func _populate_showdown_list():
 	for child in _showdown_col_left.get_children():
@@ -442,6 +583,9 @@ func _spawn_waiting_player():
 
 func _process(delta):
 	fps_label.text = "FPS: %d" % Engine.get_frames_per_second()
+
+	if _paused:
+		return
 
 	match _phase:
 		PHASE_WAITING:

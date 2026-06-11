@@ -1,0 +1,57 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/BattleArenaBanner.gd" id="1"]
+
+[node name="BattleArenaBanner" type="VBoxContainer"]
+script = ExtResource("1")
+size_flags_horizontal = 3
+mouse_filter = 2
+
+[node name="SwordIcon" type="TextureRect" parent="."]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(64, 64)
+stretch_mode = 5
+expand_mode = 3
+size_flags_horizontal = 4
+size_flags_vertical = 4
+mouse_filter = 2
+
+[node name="SpST" type="Control" parent="."]
+unique_name_in_owner = true
+mouse_filter = 2
+
+[node name="TitleLabel" type="Label" parent="."]
+unique_name_in_owner = true
+text = "STREAM BATTLE"
+horizontal_alignment = 1
+size_flags_horizontal = 3
+
+[node name="SpTA" type="Control" parent="."]
+unique_name_in_owner = true
+mouse_filter = 2
+
+[node name="ArenaLabel" type="Label" parent="."]
+unique_name_in_owner = true
+text = "A R E N A"
+horizontal_alignment = 1
+size_flags_horizontal = 3
+
+[node name="SpAD" type="Control" parent="."]
+unique_name_in_owner = true
+mouse_filter = 2
+
+[node name="GoldDivider" type="Control" parent="."]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(200, 16)
+size_flags_horizontal = 4
+mouse_filter = 2
+
+[node name="SpDT" type="Control" parent="."]
+unique_name_in_owner = true
+mouse_filter = 2
+
+[node name="TaglineLabel" type="Label" parent="."]
+unique_name_in_owner = true
+text = "T W I T C H  V I E W E R  B A T T L E  R O Y A L E"
+horizontal_alignment = 1
+size_flags_horizontal = 4
