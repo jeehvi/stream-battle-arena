@@ -56,7 +56,7 @@ func _setup_ui():
 	title.add_theme_font_size_override("font_size", 48)
 	center.add_child(title)
 
-	center.add_child(_spacer(24))
+	center.add_child(_spacer(32))
 
 	var audio_title = Label.new()
 	audio_title.text = "AUDIO"
@@ -65,9 +65,9 @@ func _setup_ui():
 	audio_title.add_theme_color_override("font_color", Color("#CCCCCC"))
 	center.add_child(audio_title)
 
-	center.add_child(_spacer(8))
+	center.add_child(_spacer(12))
 	center.add_child(_build_volume_row())
-	center.add_child(_spacer(16))
+	center.add_child(_spacer(24))
 
 	var display_title = Label.new()
 	display_title.text = "DISPLAY"
@@ -76,9 +76,9 @@ func _setup_ui():
 	display_title.add_theme_color_override("font_color", Color("#CCCCCC"))
 	center.add_child(display_title)
 
-	center.add_child(_spacer(8))
+	center.add_child(_spacer(12))
 	center.add_child(_build_display_row())
-	center.add_child(_spacer(16))
+	center.add_child(_spacer(24))
 
 	var btn_row = HBoxContainer.new()
 	btn_row.alignment = BoxContainer.ALIGNMENT_CENTER

@@ -1,22 +1,28 @@
 extends Control
 
 const StyledButton = preload("res://scripts/ui/StyledButton.gd")
-const SafeArea = preload("res://scripts/ui/SafeArea.gd")
+const UISafeArea = preload("res://scripts/ui/UISafeArea.gd")
 const SettingsIcon = preload("res://scripts/ui/SettingsIcon.gd")
 const SettingsPanel = preload("res://scripts/ui/SettingsPanel.gd")
 const ConfirmDialog = preload("res://scripts/ui/ConfirmDialog.gd")
 const BattleArenaBannerScene = preload("res://scenes/ui/BattleArenaBanner.tscn")
+const DarkArenaCardScene = preload("res://scenes/ui/DarkArenaCard.tscn")
 
 var _player_count: SpinBox
 var _selected_waiting_idx := 0
 var _waiting_buttons: Array[Button]
 
 var _canvas_root: Control
-var _safe_area: MarginContainer
+var _ui_safe_area: MarginContainer
+var _full_area: Control
 var _top_spacer: Control
 var _banner_section
-var _settings_section: Control
 var _banner_to_content: Control
+var _card_area: CenterContainer
+var _filler_spacer: Control
+var _footer_section: Control
+var _streamer_info: HBoxContainer
+var _join_helper: Label
 
 
 func _ready():
@@ -27,11 +33,14 @@ func _ready():
 
 	_build_canvas()
 	_build_background()
-	_build_settings_section()
+	_build_main_menu_content()
+	_build_streamer_info()
+	_build_join_helper()
 	_add_settings_icon()
 
 	get_viewport().size_changed.connect(_update_layout)
 	_update_layout()
+	call_deferred("_debug_centering")
 
 
 func _build_background():
@@ -60,24 +69,35 @@ func _build_canvas():
 	_canvas_root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_canvas_root)
 
-	_safe_area = SafeArea.new()
-	_safe_area.name = "SafeArea"
-	_safe_area.anchor_left = 0.0
-	_safe_area.anchor_top = 0.0
-	_safe_area.anchor_right = 1.0
-	_safe_area.anchor_bottom = 1.0
-	_canvas_root.add_child(_safe_area)
+	_ui_safe_area = UISafeArea.new()
+	_ui_safe_area.name = "UISafeArea"
+	_ui_safe_area.anchor_left = 0.0
+	_ui_safe_area.anchor_top = 0.0
+	_ui_safe_area.anchor_right = 1.0
+	_ui_safe_area.anchor_bottom = 1.0
+	_canvas_root.add_child(_ui_safe_area)
+
+	_full_area = Control.new()
+	_full_area.name = "FullArea"
+	_full_area.anchor_left = 0.0
+	_full_area.anchor_top = 0.0
+	_full_area.anchor_right = 1.0
+	_full_area.anchor_bottom = 1.0
+	_full_area.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_full_area.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_ui_safe_area.add_child(_full_area)
 
 	var main_layout = VBoxContainer.new()
 	main_layout.name = "MainLayout"
 	main_layout.anchor_left = 0.0
 	main_layout.anchor_top = 0.0
-	main_layout.anchor_right = 0.0
-	main_layout.anchor_bottom = 0.0
-	_safe_area.add_child(main_layout)
+	main_layout.anchor_right = 1.0
+	main_layout.anchor_bottom = 1.0
+	_full_area.add_child(main_layout)
 
 	_top_spacer = Control.new()
 	_top_spacer.name = "TopSpacer"
+	_top_spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	main_layout.add_child(_top_spacer)
 
 	_banner_section = BattleArenaBannerScene.instantiate()
@@ -86,100 +106,54 @@ func _build_canvas():
 
 	_banner_to_content = Control.new()
 	_banner_to_content.name = "BannerToCardSpacer"
+	_banner_to_content.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	main_layout.add_child(_banner_to_content)
 
-	_settings_section = Control.new()
-	_settings_section.name = "SettingsSection"
-	_settings_section.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_settings_section.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	main_layout.add_child(_settings_section)
+	_card_area = CenterContainer.new()
+	_card_area.name = "CardArea"
+	_card_area.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	main_layout.add_child(_card_area)
+
+	_filler_spacer = Control.new()
+	_filler_spacer.name = "FillerSpacer"
+	_filler_spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_filler_spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_filler_spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	main_layout.add_child(_filler_spacer)
+
+	_footer_section = Control.new()
+	_footer_section.name = "FooterSection"
+	_footer_section.custom_minimum_size = Vector2(0, 56)
+	main_layout.add_child(_footer_section)
 
 
-func _build_settings_section():
+func _build_main_menu_content():
 	var cinzel = load("res://assets/fonts/Cinzel-Bold.otf")
 
-	var outer = VBoxContainer.new()
-	outer.name = "CardContainer"
-	outer.anchor_left = 0.0
-	outer.anchor_top = 0.0
-	outer.anchor_right = 1.0
-	outer.anchor_bottom = 1.0
-	_settings_section.add_child(outer)
+	var card: Variant = DarkArenaCardScene.instantiate()
+	card.name = "MainMenuCard"
+	_card_area.add_child(card)
+	card.set_title("GAME OPTIONS")
 
-	var card = Panel.new()
-	card.name = "MenuCard"
-	card.custom_minimum_size = Vector2(560, 0)
-	card.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-
-	var s = StyleBoxFlat.new()
-	s.bg_color = Color("#171717")
-	s.border_color = Color("#8A6A1F")
-	s.border_width_left = 2
-	s.border_width_right = 2
-	s.border_width_top = 2
-	s.border_width_bottom = 2
-	s.corner_radius_top_left = 8
-	s.corner_radius_top_right = 8
-	s.corner_radius_bottom_left = 8
-	s.corner_radius_bottom_right = 8
-	s.content_margin_left = 32
-	s.content_margin_right = 32
-	s.content_margin_top = 6
-	s.content_margin_bottom = 6
-	s.shadow_color = Color(0, 0, 0, 0.35)
-	s.shadow_size = 6
-	card.add_theme_stylebox_override("panel", s)
-	outer.add_child(card)
-
-	_add_card_corner_marks(card)
-
-	var vbox = VBoxContainer.new()
-	vbox.name = "CardContent"
-	vbox.anchor_left = 0.0
-	vbox.anchor_top = 0.0
-	vbox.anchor_right = 1.0
-	vbox.anchor_bottom = 1.0
+	var vbox = card.get_content()
 	vbox.alignment = BoxContainer.ALIGNMENT_CENTER
-	card.add_child(vbox)
-
-	# --- Streamer row ---
-	var streamer_row = HBoxContainer.new()
-	streamer_row.alignment = BoxContainer.ALIGNMENT_CENTER
-	streamer_row.add_theme_constant_override("separation", 8)
-
-	var twitch_icon = TextureRect.new()
-	twitch_icon.texture = preload("res://assets/ui/icons/twitch.svg")
-	twitch_icon.custom_minimum_size = Vector2(24, 24)
-	twitch_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	twitch_icon.expand_mode = TextureRect.EXPAND_FIT_HEIGHT_PROPORTIONAL
-	streamer_row.add_child(twitch_icon)
-
-	var name_label = Label.new()
-	var streamer = GameSettings.streamer_name
-	name_label.text = streamer.to_upper() if streamer else "TESTSTREAMER"
-	name_label.add_theme_font_override("font", cinzel)
-	name_label.add_theme_font_size_override("font_size", 24)
-	name_label.add_theme_color_override("font_color", Color("#D4AF37"))
-	streamer_row.add_child(name_label)
-
-	vbox.add_child(streamer_row)
-
-	vbox.add_child(_make_spacer(2))
 
 	# --- Waiting time section ---
 	var waiting_title = Label.new()
 	waiting_title.text = "Waiting time for players to join"
+	waiting_title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	waiting_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	waiting_title.add_theme_font_override("font", cinzel)
 	waiting_title.add_theme_font_size_override("font_size", 18)
 	waiting_title.add_theme_color_override("font_color", Color("#CCCCCC"))
 	vbox.add_child(waiting_title)
 
-	vbox.add_child(_make_spacer(2))
+	vbox.add_child(_make_spacer(3))
 
 	_waiting_buttons = []
 	var duration_labels = ["30 SEC", "60 SEC", "90 SEC"]
 	var waiting_row = HBoxContainer.new()
+	waiting_row.name = "WaitingRow"
 	waiting_row.alignment = BoxContainer.ALIGNMENT_CENTER
 	waiting_row.add_theme_constant_override("separation", 6)
 
@@ -192,32 +166,25 @@ func _build_settings_section():
 		waiting_row.add_child(btn)
 
 	_update_waiting_button_styles()
-	vbox.add_child(waiting_row)
+	var waiting_center = CenterContainer.new()
+	waiting_center.name = "WaitingCenter"
+	waiting_center.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	waiting_center.add_child(waiting_row)
+	vbox.add_child(waiting_center)
 
-	vbox.add_child(_make_spacer(2))
-
-	# --- Join command notice ---
-	var join_info = Label.new()
-	join_info.text = "Viewers will need to type !battle to join the battle."
-	join_info.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	join_info.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	join_info.add_theme_font_override("font", cinzel)
-	join_info.add_theme_font_size_override("font_size", 18)
-	join_info.add_theme_color_override("font_color", Color("#BDBDBD"))
-	vbox.add_child(join_info)
-
-	vbox.add_child(_make_spacer(2))
+	vbox.add_child(_make_spacer(8))
 
 	# --- Test Players (dev-only) ---
 	var test_row = HBoxContainer.new()
+	test_row.name = "TestRow"
 	test_row.alignment = BoxContainer.ALIGNMENT_CENTER
 	test_row.add_theme_constant_override("separation", 6)
 
 	var test_label = Label.new()
 	test_label.text = "TEST PLAYERS"
 	test_label.add_theme_font_override("font", cinzel)
-	test_label.add_theme_font_size_override("font_size", 16)
-	test_label.add_theme_color_override("font_color", Color("#BDBDBD"))
+	test_label.add_theme_font_size_override("font_size", 14)
+	test_label.add_theme_color_override("font_color", Color("#9A9A9A"))
 	test_row.add_child(test_label)
 
 	_player_count = SpinBox.new()
@@ -228,39 +195,85 @@ func _build_settings_section():
 	_player_count.custom_minimum_size = Vector2(60, 22)
 	test_row.add_child(_player_count)
 
-	vbox.add_child(test_row)
+	var test_center = CenterContainer.new()
+	test_center.name = "TestCenter"
+	test_center.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	test_center.add_child(test_row)
+	vbox.add_child(test_center)
 
-	vbox.add_child(_make_spacer(2))
+	vbox.add_child(_make_spacer(12))
 
 	# --- Buttons ---
 	var start_btn = StyledButton.new()
 	start_btn.name = "StartButton"
 	start_btn.text = "START BATTLE"
-	start_btn.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	start_btn.pressed.connect(_on_start_pressed)
-	vbox.add_child(start_btn)
+	var start_center = CenterContainer.new()
+	start_center.name = "StartCenter"
+	start_center.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	start_center.add_child(start_btn)
+	vbox.add_child(start_center)
 
-	vbox.add_child(_make_spacer(2))
-
-	var settings_btn = StyledButton.new()
-	settings_btn.name = "SettingsButton"
-	settings_btn.text = "SETTINGS"
-	settings_btn.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	settings_btn.pressed.connect(
-		func():
-			var panel = SettingsPanel.new()
-			add_child(panel)
-	)
-	vbox.add_child(settings_btn)
-
-	vbox.add_child(_make_spacer(2))
+	vbox.add_child(_make_spacer(6))
 
 	var exit_btn = StyledButton.new()
 	exit_btn.name = "ExitButton"
 	exit_btn.text = "EXIT GAME"
-	exit_btn.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	exit_btn.pressed.connect(_on_exit_pressed)
-	vbox.add_child(exit_btn)
+	var exit_center = CenterContainer.new()
+	exit_center.name = "ExitCenter"
+	exit_center.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	exit_center.add_child(exit_btn)
+	vbox.add_child(exit_center)
+
+
+func _build_streamer_info():
+	var cinzel = load("res://assets/fonts/Cinzel-Bold.otf")
+	var hbox = HBoxContainer.new()
+	hbox.name = "StreamerInfo"
+	hbox.anchor_left = 0.0
+	hbox.anchor_top = 0.0
+	hbox.offset_left = 12
+	hbox.offset_top = 8
+	hbox.alignment = BoxContainer.ALIGNMENT_CENTER
+	hbox.add_theme_constant_override("separation", 8)
+
+	var icon = TextureRect.new()
+	icon.texture = preload("res://assets/ui/icons/twitch.svg")
+	icon.custom_minimum_size = Vector2(28, 28)
+	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	icon.expand_mode = TextureRect.EXPAND_FIT_HEIGHT_PROPORTIONAL
+	hbox.add_child(icon)
+
+	var label = Label.new()
+	var streamer = GameSettings.streamer_name
+	label.text = streamer.to_upper() if streamer else "TESTSTREAMER"
+	label.add_theme_font_override("font", cinzel)
+	label.add_theme_font_size_override("font_size", 28)
+	label.add_theme_color_override("font_color", Color("#D4AF37"))
+	hbox.add_child(label)
+
+	_full_area.add_child(hbox)
+	_streamer_info = hbox
+
+
+func _build_join_helper():
+	var cinzel = load("res://assets/fonts/Cinzel-Bold.otf")
+
+	var label = Label.new()
+	label.name = "JoinHelper"
+	label.text = "Viewers will need to type !battle to join the battle."
+	label.anchor_left = 0.0
+	label.anchor_right = 1.0
+	label.anchor_top = 0.0
+	label.anchor_bottom = 1.0
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	label.add_theme_font_override("font", cinzel)
+	label.add_theme_font_size_override("font_size", 22)
+	label.add_theme_color_override("font_color", Color("#9A9A9A"))
+	_footer_section.add_child(label)
+	_join_helper = label
 
 
 func _on_waiting_option_pressed(idx: int):
@@ -306,38 +319,58 @@ func _update_waiting_button_styles():
 		btn.add_theme_stylebox_override("pressed", style)
 
 
-func _add_card_corner_marks(card: Panel):
-	var marks = Control.new()
-	marks.name = "CornerMarks"
-	marks.anchor_left = 0.0
-	marks.anchor_top = 0.0
-	marks.anchor_right = 1.0
-	marks.anchor_bottom = 1.0
-	marks.mouse_filter = Control.MOUSE_FILTER_PASS
-	marks.draw.connect(_on_corner_marks_draw)
-	card.add_child(marks)
+func _debug_centering():
+	await get_tree().process_frame
+	await get_tree().process_frame
 
+	var vp = get_window().size
+	var vp_cx = vp.x * 0.5
 
-func _on_corner_marks_draw():
-	var marks = find_child("CornerMarks", true, true) as Control
-	if not marks:
-		return
-	var w = marks.size.x
-	var h = marks.size.y
-	if w <= 0 or h <= 0:
-		return
-	var gold = Color("#D4AF37")
-	var lw = 2.0
-	var arm = 14.0
-	var off = 6.0
-	marks.draw_line(Vector2(off, off), Vector2(off + arm, off), gold, lw)
-	marks.draw_line(Vector2(off, off), Vector2(off, off + arm), gold, lw)
-	marks.draw_line(Vector2(w - off, off), Vector2(w - off - arm, off), gold, lw)
-	marks.draw_line(Vector2(w - off, off), Vector2(w - off, off + arm), gold, lw)
-	marks.draw_line(Vector2(off, h - off), Vector2(off + arm, h - off), gold, lw)
-	marks.draw_line(Vector2(off, h - off), Vector2(off, h - off - arm), gold, lw)
-	marks.draw_line(Vector2(w - off, h - off), Vector2(w - off - arm, h - off), gold, lw)
-	marks.draw_line(Vector2(w - off, h - off), Vector2(w - off, h - off - arm), gold, lw)
+	print("=== Main Menu Centering Debug ===")
+	print("Viewport center_x: ", vp_cx)
+	print("Viewport size: ", vp)
+
+	var areas = [
+		["UISafeArea", _ui_safe_area],
+		["MainLayout", find_child("MainLayout", true, false)],
+		["CardArea", find_child("CardArea", true, false)],
+		["FooterSection", find_child("FooterSection", true, false)],
+	]
+	for pair in areas:
+		var node = pair[1] as Control
+		if node:
+			var r = node.get_global_rect()
+			var cx = r.position.x + r.size.x * 0.5
+			print(pair[0], "  global_rect: pos=", r.position, " size=", r.size, "  center_x: ", cx, "  delta_viewport: ", cx - vp_cx)
+
+	var banner = _banner_section
+	if banner and banner is Control:
+		var br = banner.get_global_rect()
+		var bcx = br.position.x + br.size.x * 0.5
+		print("BannerSection  global_rect: pos=", br.position, " size=", br.size, "  center_x: ", bcx, "  delta_viewport: ", bcx - vp_cx)
+
+	var items = [
+		["SwordIcon", "SwordIcon"],
+		["STREAM BATTLE", "TitleLabel"],
+		["A R E N A", "ArenaLabel"],
+		["StreamerInfo", "StreamerInfo"],
+		["WaitingRow", "WaitingRow"],
+		["TestRow", "TestRow"],
+		["StartButton", "StartButton"],
+		["ExitButton", "ExitButton"],
+		["JoinHelper", "JoinHelper"],
+	]
+	var ref_x = vp_cx
+	for pair in items:
+		var node = find_child(pair[1], true, false)
+		if node and node is Control:
+			var r = node.get_global_rect()
+			var cx = r.position.x + r.size.x * 0.5
+			var delta = cx - ref_x
+			print(pair[0], " center_x: ", cx, "  delta: ", delta)
+		else:
+			print(pair[0], ": NOT FOUND")
+	print("================================")
 
 
 func _update_layout():
@@ -347,15 +380,19 @@ func _update_layout():
 	_canvas_root.scale = Vector2(factor, factor)
 	_canvas_root.position = Vector2.ZERO
 
-	_safe_area.add_theme_constant_override("margin_left", 80)
-	_safe_area.add_theme_constant_override("margin_right", 80)
-	_safe_area.add_theme_constant_override("margin_top", 54)
-	_safe_area.add_theme_constant_override("margin_bottom", 54)
+	if _banner_section and _banner_section.has_method("update_spacer_sizes"):
+		_banner_section.update_spacer_sizes()
 
-	_banner_section.update_spacer_sizes()
+	const TOP_SPACER_H = 75.6
+	const GAP = 50.0
+	const CARD_WIDTH = 560.0
 
-	_top_spacer.custom_minimum_size = Vector2(0, 4)
-	_banner_to_content.custom_minimum_size = Vector2(0, 40)
+	_top_spacer.custom_minimum_size = Vector2(0, TOP_SPACER_H)
+	_banner_to_content.custom_minimum_size = Vector2(0, GAP)
+
+	var card = find_child("MainMenuCard", true, false)
+	if card:
+		card.custom_minimum_size = Vector2(CARD_WIDTH, 0)
 
 
 func _add_settings_icon():
@@ -366,7 +403,7 @@ func _add_settings_icon():
 			var panel = SettingsPanel.new()
 			add_child(panel)
 	)
-	add_child(icon)
+	_full_area.add_child(icon)
 
 
 func _make_spacer(height: int) -> Control:

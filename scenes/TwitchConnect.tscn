@@ -1,9 +1,10 @@
-[gd_scene load_steps=5 format=3 uid="uid://c1wn6gd2j2xhk"]
+[gd_scene load_steps=6 format=3 uid="uid://c1wn6gd2j2xhk"]
 
 [ext_resource type="Script" path="res://scripts/TwitchConnect.gd" id="1"]
-[ext_resource type="Script" path="res://scripts/ui/SafeArea.gd" id="2"]
+[ext_resource type="Script" path="res://scripts/ui/UISafeArea.gd" id="2"]
 [ext_resource type="Script" path="res://scripts/ui/StyledButton.gd" id="3"]
 [ext_resource type="Texture2D" path="res://assets/ui/connect-twitch-bg-1920x1080.png" id="4"]
+[ext_resource type="Script" path="res://scripts/ui/DarkArenaCard.gd" id="5"]
 
 [node name="TwitchConnect" type="Control"]
 script = ExtResource("1")
@@ -33,104 +34,42 @@ anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 
-[node name="MainLayout" type="VBoxContainer" parent="CanvasRoot/SafeArea"]
+[node name="FullArea" type="Control" parent="CanvasRoot/SafeArea"]
+unique_name_in_owner = true
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+size_flags_horizontal = 3
+size_flags_vertical = 3
+mouse_filter = 2
+
+[node name="MainLayout" type="VBoxContainer" parent="CanvasRoot/SafeArea/FullArea"]
 unique_name_in_owner = true
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 alignment = 0
 
-[node name="TopSpacer" type="Control" parent="CanvasRoot/SafeArea/MainLayout"]
+[node name="TopSpacer" type="Control" parent="CanvasRoot/SafeArea/FullArea/MainLayout"]
 unique_name_in_owner = true
 mouse_filter = 2
 
-[node name="BannerToCardSpacer" type="Control" parent="CanvasRoot/SafeArea/MainLayout"]
+[node name="BannerToCardSpacer" type="Control" parent="CanvasRoot/SafeArea/FullArea/MainLayout"]
 unique_name_in_owner = true
 mouse_filter = 2
 
-[node name="AuthSection" type="Control" parent="CanvasRoot/SafeArea/MainLayout"]
+[node name="AuthSection" type="Control" parent="CanvasRoot/SafeArea/FullArea/MainLayout"]
 unique_name_in_owner = true
 size_flags_horizontal = 3
 size_flags_vertical = 4
 mouse_filter = 2
 
-[node name="CardCenter" type="CenterContainer" parent="CanvasRoot/SafeArea/MainLayout/AuthSection"]
+[node name="CardCenter" type="CenterContainer" parent="CanvasRoot/SafeArea/FullArea/MainLayout/AuthSection"]
 unique_name_in_owner = true
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 
-[node name="AuthCard" type="Panel" parent="CanvasRoot/SafeArea/MainLayout/AuthSection/CardCenter"]
+[node name="AuthCard" type="Panel" parent="CanvasRoot/SafeArea/FullArea/MainLayout/AuthSection/CardCenter"]
 unique_name_in_owner = true
-mouse_filter = 1
-
-[node name="CardContent" type="VBoxContainer" parent="CanvasRoot/SafeArea/MainLayout/AuthSection/CardCenter/AuthCard"]
-unique_name_in_owner = true
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-alignment = 1
-size_flags_horizontal = 3
-
-[node name="AuthTitle" type="Label" parent="CanvasRoot/SafeArea/MainLayout/AuthSection/CardCenter/AuthCard/CardContent"]
-unique_name_in_owner = true
-text = "AUTHENTICATION"
-horizontal_alignment = 1
-autowrap_mode = 0
-size_flags_horizontal = 4
-
-[node name="AuthDivider" type="ColorRect" parent="CanvasRoot/SafeArea/MainLayout/AuthSection/CardCenter/AuthCard/CardContent"]
-unique_name_in_owner = true
-color = Color(0.831, 0.686, 0.216, 1)
-custom_minimum_size = Vector2(120, 1)
-size_flags_horizontal = 4
-
-[node name="TwitchRow" type="HBoxContainer" parent="CanvasRoot/SafeArea/MainLayout/AuthSection/CardCenter/AuthCard/CardContent"]
-unique_name_in_owner = true
-alignment = 1
-size_flags_horizontal = 4
-
-[node name="TwitchIcon" type="TextureRect" parent="CanvasRoot/SafeArea/MainLayout/AuthSection/CardCenter/AuthCard/CardContent/TwitchRow"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(24, 24)
-stretch_mode = 5
-expand_mode = 3
-size_flags_vertical = 4
-mouse_filter = 2
-
-[node name="TwitchTitle" type="Label" parent="CanvasRoot/SafeArea/MainLayout/AuthSection/CardCenter/AuthCard/CardContent/TwitchRow"]
-unique_name_in_owner = true
-text = "Connect with Twitch"
-autowrap_mode = 0
-size_flags_vertical = 4
-
-[node name="DescriptionLabel" type="Label" parent="CanvasRoot/SafeArea/MainLayout/AuthSection/CardCenter/AuthCard/CardContent"]
-unique_name_in_owner = true
-text = "Sign in with your Twitch account to enter the arena."
-horizontal_alignment = 1
-autowrap_mode = 0
-size_flags_horizontal = 4
-
-[node name="ButtonCenter" type="CenterContainer" parent="CanvasRoot/SafeArea/MainLayout/AuthSection/CardCenter/AuthCard/CardContent"]
-unique_name_in_owner = true
-size_flags_horizontal = 3
-
-[node name="ConnectButton" type="Button" parent="CanvasRoot/SafeArea/MainLayout/AuthSection/CardCenter/AuthCard/CardContent/ButtonCenter"]
-unique_name_in_owner = true
-script = ExtResource("3")
-text = "CONNECT TWITCH"
-
-[node name="StatusLabel" type="Label" parent="CanvasRoot/SafeArea/MainLayout/AuthSection/CardCenter/AuthCard/CardContent"]
-unique_name_in_owner = true
-text = "Not connected to Twitch"
-horizontal_alignment = 1
-autowrap_mode = 0
-size_flags_horizontal = 4
-
-[node name="ContinueButton" type="Button" parent="CanvasRoot/SafeArea/MainLayout/AuthSection/CardCenter/AuthCard/CardContent"]
-unique_name_in_owner = true
-script = ExtResource("3")
-text = "CONTINUE"
-custom_minimum_size = Vector2(200, 0)
-visible = false
-size_flags_horizontal = 4
+script = ExtResource("5")

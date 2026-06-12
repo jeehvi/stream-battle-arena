@@ -1,26 +1,20 @@
 extends Node2D
 
 const StyledButton = preload("res://scripts/ui/StyledButton.gd")
-const ScreenBackground = preload("res://scripts/ui/ScreenBackground.gd")
-const SafeArea = preload("res://scripts/ui/SafeArea.gd")
-const SettingsIcon = preload("res://scripts/ui/SettingsIcon.gd")
 const SettingsPanel = preload("res://scripts/ui/SettingsPanel.gd")
 const ConfirmDialog = preload("res://scripts/ui/ConfirmDialog.gd")
 
 const SCREEN_PADDING := 80.0
 const PLAYER_SPEED := 60.0
 
-@onready var fps_label: Label = $CanvasLayer/FPSLabel
 @onready var alive_label: Label = $CanvasLayer/AliveLabel
 @onready var killfeed_container: VBoxContainer = $CanvasLayer/KillfeedContainer
 @onready var camera: Camera2D = $Camera2D
 @onready var canvas_layer: CanvasLayer = $CanvasLayer
 
 var showdown_overlay: Control
-var results_screen: Control
-var results_content: VBoxContainer
+var _match_results_ui: Control
 var timer_label: Label
-var _match_duration_label: Label
 var _showdown_list: HBoxContainer
 var _showdown_col_left: VBoxContainer
 var _showdown_col_right: VBoxContainer
@@ -74,12 +68,12 @@ var _session_recorded := false
 var _initial_player_count := 0
 var _bullet_debug_timer := 0.0
 
-var _trophy_texture: Texture2D
-var _hourglass_texture: Texture2D
 var _bangers_font: Font
 
 var _paused := false
 var _pause_overlay: Control
+var battle_speed_multiplier := 1.0
+var speed_toggle_button: Button = null
 
 
 func _ready():
@@ -91,105 +85,13 @@ func _ready():
 
 
 func _load_textures():
-	_trophy_texture = load("res://assets/ui/icons/trophy.svg")
-	_hourglass_texture = load("res://assets/ui/icons/hourglass.svg")
 	_bangers_font = load("res://assets/fonts/Bangers-Regular.ttf")
 
 
 func _setup_ui():
-	results_screen = Control.new()
-	results_screen.name = "ResultsScreen"
-	results_screen.visible = false
-	results_screen.anchor_left = 0.0
-	results_screen.anchor_top = 0.0
-	results_screen.anchor_right = 1.0
-	results_screen.anchor_bottom = 1.0
-	canvas_layer.add_child(results_screen)
-
-	var bg = ScreenBackground.new()
-	bg.name = "Background"
-	bg.modulate = Color(1, 1, 1, 0.85)
-	results_screen.add_child(bg)
-
-	var safe_area = SafeArea.new()
-	safe_area.name = "SafeArea"
-	safe_area.anchor_left = 0.0
-	safe_area.anchor_top = 0.0
-	safe_area.anchor_right = 1.0
-	safe_area.anchor_bottom = 1.0
-	results_screen.add_child(safe_area)
-
-	var content = VBoxContainer.new()
-	content.name = "Content"
-	content.anchor_left = 0.0
-	content.anchor_top = 0.0
-	content.anchor_right = 1.0
-	content.anchor_bottom = 1.0
-	safe_area.add_child(content)
-	results_content = content
-
-	var match_duration_row = HBoxContainer.new()
-	match_duration_row.name = "MatchDurationRow"
-	match_duration_row.anchor_left = 1.0
-	match_duration_row.anchor_top = 0.0
-	match_duration_row.anchor_right = 1.0
-	match_duration_row.anchor_bottom = 0.0
-	match_duration_row.offset_left = -320.0
-	match_duration_row.offset_right = -80.0
-	match_duration_row.offset_top = 60.0
-	match_duration_row.offset_bottom = 90.0
-	match_duration_row.alignment = BoxContainer.ALIGNMENT_CENTER
-	match_duration_row.add_theme_constant_override("separation", 6)
-	results_screen.add_child(match_duration_row)
-
-	var hourglass_icon = TextureRect.new()
-	hourglass_icon.name = "HourglassIcon"
-	hourglass_icon.texture = _hourglass_texture
-	hourglass_icon.custom_minimum_size = Vector2(24, 24)
-	hourglass_icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	match_duration_row.add_child(hourglass_icon)
-
-	_match_duration_label = Label.new()
-	_match_duration_label.name = "MatchDurationLabel"
-	_match_duration_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	_match_duration_label.vertical_alignment = VERTICAL_ALIGNMENT_TOP
-	_match_duration_label.add_theme_font_size_override("font_size", 18)
-	match_duration_row.add_child(_match_duration_label)
-
-	var button_row = HBoxContainer.new()
-	button_row.name = "ActionButtons"
-	button_row.anchor_left = 0.5
-	button_row.anchor_top = 1.0
-	button_row.anchor_right = 0.5
-	button_row.anchor_bottom = 1.0
-	button_row.offset_left = -210.0
-	button_row.offset_top = -100.0
-	button_row.offset_right = 210.0
-	button_row.offset_bottom = -60.0
-	button_row.alignment = BoxContainer.ALIGNMENT_CENTER
-	button_row.add_theme_constant_override("separation", 24)
-	results_screen.add_child(button_row)
-
-	var play_again = StyledButton.new()
-	play_again.name = "PlayAgain"
-	play_again.text = "PLAY AGAIN"
-	play_again.pressed.connect(_on_play_again)
-	button_row.add_child(play_again)
-
-	var back_menu = StyledButton.new()
-	back_menu.name = "BackToMenu"
-	back_menu.text = "BACK TO MENU"
-	back_menu.pressed.connect(_on_back_to_menu)
-	button_row.add_child(back_menu)
-
-	var rs_icon = SettingsIcon.new()
-	rs_icon.name = "ResultsSettingsIcon"
-	rs_icon.pressed.connect(
-		func():
-			var panel = SettingsPanel.new()
-			canvas_layer.add_child(panel)
-	)
-	results_screen.add_child(rs_icon)
+	_match_results_ui = preload("res://scenes/MatchResults.tscn").instantiate()
+	_match_results_ui.name = "MatchResults"
+	canvas_layer.add_child(_match_results_ui)
 
 	showdown_overlay = Control.new()
 	showdown_overlay.name = "ShowdownOverlay"
@@ -200,9 +102,13 @@ func _setup_ui():
 	showdown_overlay.anchor_bottom = 1.0
 	canvas_layer.add_child(showdown_overlay)
 
-	var sd_bg = ScreenBackground.new()
+	var sd_bg = ColorRect.new()
 	sd_bg.name = "Background"
-	sd_bg.modulate = Color(1, 1, 1, 0.65)
+	sd_bg.color = Color(0, 0, 0, 0.65)
+	sd_bg.anchor_left = 0.0
+	sd_bg.anchor_top = 0.0
+	sd_bg.anchor_right = 1.0
+	sd_bg.anchor_bottom = 1.0
 	showdown_overlay.add_child(sd_bg)
 
 	var sd_content = VBoxContainer.new()
@@ -277,9 +183,13 @@ func _setup_ui():
 	_waiting_overlay.anchor_bottom = 1.0
 	canvas_layer.add_child(_waiting_overlay)
 
-	var wt_bg = ScreenBackground.new()
+	var wt_bg = ColorRect.new()
 	wt_bg.name = "Background"
-	wt_bg.modulate = Color(1, 1, 1, 0.45)
+	wt_bg.color = Color(0, 0, 0, 0.45)
+	wt_bg.anchor_left = 0.0
+	wt_bg.anchor_top = 0.0
+	wt_bg.anchor_right = 1.0
+	wt_bg.anchor_bottom = 1.0
 	_waiting_overlay.add_child(wt_bg)
 
 	_waiting_title = Label.new()
@@ -398,14 +308,14 @@ func _setup_ui():
 
 	var ptitle = Label.new()
 	ptitle.name = "PauseTitle"
-	ptitle.text = "PAUSED"
+	ptitle.text = "BATTLE PAUSED"
 	ptitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	ptitle.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	ptitle.add_theme_font_size_override("font_size", 56)
 	ptitle.custom_minimum_size = Vector2(0, 80)
 	pcenter.add_child(ptitle)
 
-	pcenter.add_child(_pspacer(28))
+	pcenter.add_child(_pspacer(32))
 
 	var presume_btn = StyledButton.new()
 	presume_btn.name = "ResumeButton"
@@ -414,7 +324,7 @@ func _setup_ui():
 	presume_btn.pressed.connect(_resume_battle)
 	pcenter.add_child(presume_btn)
 
-	pcenter.add_child(_pspacer(10))
+	pcenter.add_child(_pspacer(16))
 
 	var psettings_btn = StyledButton.new()
 	psettings_btn.name = "PauseSettingsButton"
@@ -427,23 +337,23 @@ func _setup_ui():
 	)
 	pcenter.add_child(psettings_btn)
 
-	pcenter.add_child(_pspacer(10))
+	pcenter.add_child(_pspacer(32))
 
-	var pmenu_btn = StyledButton.new()
-	pmenu_btn.name = "MainMenuButton"
-	pmenu_btn.text = "MAIN MENU"
-	pmenu_btn.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	pmenu_btn.pressed.connect(_on_pause_main_menu)
-	pcenter.add_child(pmenu_btn)
-
-	pcenter.add_child(_pspacer(10))
-
-	var pexit_btn = StyledButton.new()
-	pexit_btn.name = "PauseExitButton"
-	pexit_btn.text = "EXIT GAME"
-	pexit_btn.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	pexit_btn.pressed.connect(_on_pause_exit)
-	pcenter.add_child(pexit_btn)
+	speed_toggle_button = Button.new()
+	speed_toggle_button.name = "SpeedToggleButton"
+	speed_toggle_button.text = "SPEED x1"
+	speed_toggle_button.anchor_left = 0.0
+	speed_toggle_button.anchor_top = 1.0
+	speed_toggle_button.anchor_right = 0.0
+	speed_toggle_button.anchor_bottom = 1.0
+	speed_toggle_button.offset_left = 10.0
+	speed_toggle_button.offset_top = -40.0
+	speed_toggle_button.offset_right = 110.0
+	speed_toggle_button.offset_bottom = -10.0
+	speed_toggle_button.add_theme_font_size_override("font_size", 14)
+	speed_toggle_button.visible = false
+	speed_toggle_button.pressed.connect(_on_speed_toggle)
+	canvas_layer.add_child(speed_toggle_button)
 
 
 func _pause_battle():
@@ -454,6 +364,19 @@ func _pause_battle():
 func _resume_battle():
 	_paused = false
 	_pause_overlay.visible = false
+
+
+func _on_speed_toggle():
+	if speed_toggle_button == null:
+		return
+	if battle_speed_multiplier == 2.0:
+		battle_speed_multiplier = 1.0
+		if speed_toggle_button:
+			speed_toggle_button.text = "SPEED x1"
+	else:
+		battle_speed_multiplier = 2.0
+		if speed_toggle_button:
+			speed_toggle_button.text = "SPEED x2"
 
 
 func _on_pause_main_menu():
@@ -482,7 +405,7 @@ func _pspacer(height: int) -> Control:
 func _unhandled_input(event):
 	if event is InputEventKey and event.pressed and event.keycode == KEY_ESCAPE:
 		get_viewport().set_input_as_handled()
-		if results_screen.visible:
+		if _match_results_ui and _match_results_ui.visible:
 			return
 		if _paused:
 			_resume_battle()
@@ -542,7 +465,13 @@ func _start_waiting_phase():
 
 	_waiting_overlay.visible = true
 	alive_label.visible = false
+	if _waiting_players == null:
+		push_error("NULL TEXT TARGET in _start_waiting_phase: _waiting_players")
+		return
 	_waiting_players.text = "0 joined"
+	if _waiting_countdown == null:
+		push_error("NULL TEXT TARGET in _start_waiting_phase: _waiting_countdown")
+		return
 	_waiting_countdown.text = "Battle starts in %d" % GameSettings.waiting_duration
 	queue_redraw()
 
@@ -563,27 +492,41 @@ func _spawn_waiting_player():
 	p.damage = config.damage
 	p.attack_cooldown = config.attack_cooldown
 
-	p.normalized_position = Vector2(randf_range(0.05, 0.95), randf_range(0.05, 0.95))
-	p.direction = Vector2.ZERO
+	p.direction = Vector2(randf_range(-1, 1), randf_range(-1, 1)).normalized()
+	p._wander_target = Vector2(randf_range(-1, 1), randf_range(-1, 1)).normalized()
+	p._wander_timer = randf_range(1.5, 4.0)
 
 	var viewport = get_window().size
 	var zoom = camera.zoom.x
 	var half_w = viewport.x / zoom * 0.5
 	var half_h = viewport.y / zoom * 0.5
 	var margin = SCREEN_PADDING / zoom
-	p.position = Vector2(
-		lerpf(-half_w + margin, half_w - margin, p.normalized_position.x),
-		lerpf(-half_h + margin, half_h - margin, p.normalized_position.y)
-	)
+	const MIN_SPAWN_DIST := 30.0
+	for _attempt in range(20):
+		p.normalized_position = Vector2(randf_range(0.05, 0.95), randf_range(0.05, 0.95))
+		p.position = Vector2(
+			lerpf(-half_w + margin, half_w - margin, p.normalized_position.x),
+			lerpf(-half_h + margin, half_h - margin, p.normalized_position.y)
+		)
+		var too_close = false
+		for child in get_children():
+			if child is CanvasLayer or child is Camera2D:
+				continue
+			if p.position.distance_to(child.position) < MIN_SPAWN_DIST:
+				too_close = true
+				break
+		if not too_close:
+			break
 
 	add_child(p)
 	_waiting_index += 1
+	if _waiting_players == null:
+		push_error("NULL TEXT TARGET in _spawn_waiting_player: _waiting_players")
+		return
 	_waiting_players.text = "%d joined" % [player_count + 1]
 
 
 func _process(delta):
-	fps_label.text = "FPS: %d" % Engine.get_frames_per_second()
-
 	if _paused:
 		return
 
@@ -592,6 +535,9 @@ func _process(delta):
 			_waiting_remaining -= delta
 			_waiting_accum += delta
 			var sec = int(ceili(_waiting_remaining))
+			if _waiting_countdown == null:
+				push_error("NULL TEXT TARGET in _process PHASE_WAITING: _waiting_countdown")
+				return
 			_waiting_countdown.text = "Battle starts in %d" % maxi(0, sec)
 
 			while _waiting_accum >= _waiting_rate and _waiting_index < _waiting_total:
@@ -607,7 +553,7 @@ func _process(delta):
 				_update_username_visibility()
 
 		PHASE_TRANSITION:
-			_state_timer -= delta
+			_state_timer -= delta * battle_speed_multiplier
 			if _state_timer <= 0.0:
 				_transition_label.visible = false
 				timer_label.visible = true
@@ -616,28 +562,38 @@ func _process(delta):
 				_initial_player_count = _get_player_count()
 				_showdown_threshold = 5 if _initial_player_count < 50 else 10
 				alive_label.visible = true
+				battle_speed_multiplier = 1.0
+				if speed_toggle_button:
+					speed_toggle_button.text = "SPEED x1"
+					speed_toggle_button.visible = true
 				_grant_early_boost()
 				for child in get_children():
 					if not (child is CanvasLayer or child is Camera2D):
-						child.direction = Vector2(randf_range(-1, 1), randf_range(-1, 1)).normalized()
+						var d = Vector2(randf_range(-1, 1), randf_range(-1, 1)).normalized()
+						child.direction = d
+						child._wander_target = d
 
 		PHASE_PLAYING:
+			var sd = delta * battle_speed_multiplier
 			if not _game_over:
-				_move_players(delta)
+				_move_players(sd)
 
 			if not _game_over and _battle_state == STATE_PLAYING:
-				_battle_time += delta
+				_battle_time += sd
 			var minutes = int(_battle_time) / 60
 			var seconds = int(_battle_time) % 60
+			if timer_label == null:
+				push_error("NULL TEXT TARGET in _process PHASE_PLAYING: timer_label")
+				return
 			timer_label.text = "%02d:%02d" % [minutes, seconds]
 
 			if _boost_applied and _battle_time >= _early_boost_duration:
 				_revert_early_boost()
 
-			_update_state_timers(delta)
-			_update_bullets(delta)
+			_update_state_timers(sd)
+			_update_bullets(sd)
 			_update_alive_count()
-			_update_killfeed(delta)
+			_update_killfeed(sd)
 
 
 func _update_alive_count():
@@ -650,12 +606,18 @@ func _update_alive_count():
 			alive += 1
 			winner = child
 
+	if alive_label == null:
+		push_error("NULL TEXT TARGET in _update_alive_count: alive_label")
+		return
 	alive_label.text = "Alive: %d / %d" % [alive, _initial_player_count]
 
 	if not _showdown_triggered and alive <= _showdown_threshold and _battle_state == STATE_PLAYING:
 		_showdown_triggered = true
 		_battle_state = STATE_SHOWDOWN_PAUSE
 		_state_timer = 5.0
+		if _showdown_subtitle == null:
+			push_error("NULL TEXT TARGET in _update_alive_count: _showdown_subtitle")
+			return
 		_showdown_subtitle.text = "TOP %d REMAINING" % _showdown_threshold
 		_populate_showdown_list()
 		showdown_overlay.visible = true
@@ -691,36 +653,37 @@ func _move_players(delta):
 		_target_timer = 0.5
 		_update_targets()
 
+	# Movement: each player wanders randomly and independently (no target-chasing)
 	for child in get_children():
 		if child is CanvasLayer or child is Camera2D:
 			continue
 
-		child.update_direction(delta)
-
-		if _boost_applied and child.current_target != null and is_instance_valid(child.current_target) and child.current_target.is_alive:
-			var target_dir = (child.current_target.position - child.position).normalized()
-			child.direction = (child.direction * 0.7 + target_dir * 0.3).normalized()
+		child.update_movement(delta)
 
 		child.position += child.direction * PLAYER_SPEED * _speed_multiplier * delta
 
 		if child.position.x < left:
 			child.position.x = left
 			child.direction.x = abs(child.direction.x)
-			child.target_direction.x = abs(child.target_direction.x)
+			child._wander_target.x = abs(child._wander_target.x)
 		elif child.position.x > right:
 			child.position.x = right
 			child.direction.x = -abs(child.direction.x)
-			child.target_direction.x = -abs(child.target_direction.x)
+			child._wander_target.x = -abs(child._wander_target.x)
 
 		if child.position.y < top:
 			child.position.y = top
 			child.direction.y = abs(child.direction.y)
-			child.target_direction.y = abs(child.target_direction.y)
+			child._wander_target.y = abs(child._wander_target.y)
 		elif child.position.y > bottom:
 			child.position.y = bottom
 			child.direction.y = -abs(child.direction.y)
-			child.target_direction.y = -abs(child.target_direction.y)
+			child._wander_target.y = -abs(child._wander_target.y)
 
+	# Attack logic (per player)
+	for child in get_children():
+		if child is CanvasLayer or child is Camera2D:
+			continue
 		if child.is_alive:
 			child._attack_timer -= delta
 			if child._attack_timer <= 0.0 and child.current_target != null and is_instance_valid(child.current_target):
@@ -865,6 +828,8 @@ func _update_bullets(delta):
 func _show_results(winner):
 	alive_label.visible = false
 	timer_label.visible = false
+	if speed_toggle_button:
+		speed_toggle_button.visible = false
 
 	if not _session_recorded:
 		_session_recorded = true
@@ -876,49 +841,8 @@ func _show_results(winner):
 		SessionStats.record_battle(all_players, winner)
 
 	_update_global_ranking(winner)
+	GameSettings.global_ranking = _global_ranking
 
-	for child in results_content.get_children():
-		child.queue_free()
-
-	# Winner section with trophies
-	var winner_row = HBoxContainer.new()
-	winner_row.name = "WinnerRow"
-	winner_row.alignment = BoxContainer.ALIGNMENT_CENTER
-	winner_row.add_theme_constant_override("separation", 12)
-	results_content.add_child(winner_row)
-
-	var trophy_left = TextureRect.new()
-	trophy_left.name = "TrophyLeft"
-	trophy_left.texture = _trophy_texture
-	trophy_left.custom_minimum_size = Vector2(48, 48)
-	trophy_left.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	winner_row.add_child(trophy_left)
-
-	var w_title = _make_label("WINNER", 30)
-	w_title.add_theme_color_override("font_color", Color(1, 0.8, 0))
-	w_title.add_theme_font_override("font", _bangers_font)
-	winner_row.add_child(w_title)
-
-	var trophy_right = TextureRect.new()
-	trophy_right.name = "TrophyRight"
-	trophy_right.texture = _trophy_texture
-	trophy_right.custom_minimum_size = Vector2(48, 48)
-	trophy_right.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	winner_row.add_child(trophy_right)
-
-	results_content.add_child(_make_label(winner.username, 22))
-
-	var dur_min = int(_battle_time) / 60
-	var dur_sec = int(_battle_time) % 60
-	_match_duration_label.text = "Match Duration: %02d:%02d" % [dur_min, dur_sec]
-
-	var vp = winner.kills + 10
-	results_content.add_child(_make_label("Kills this battle: %d" % winner.kills, 20))
-	results_content.add_child(_make_label("Points earned: %d" % vp, 20))
-
-	results_content.add_child(_make_label("", 16))
-
-	# Collect players and find MVP
 	var all_players: Array = []
 	for child in get_children():
 		if child is CanvasLayer or child is Camera2D:
@@ -932,108 +856,20 @@ func _show_results(winner):
 
 	all_players.sort_custom(func(a, b): return a.kills > b.kills)
 
-	# Top session data
 	var top_pts = SessionStats.get_top_points(10)
 	var top_kills = SessionStats.get_top_kills(5)
 	var session_winners = SessionStats.get_session_winners()
 
-	# 2-column layout
-	var columns = HBoxContainer.new()
-	columns.add_theme_constant_override("separation", 24)
-	results_content.add_child(columns)
-
-	var col_left = VBoxContainer.new()
-	col_left.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	columns.add_child(col_left)
-
-	var col_right = VBoxContainer.new()
-	col_right.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	columns.add_child(col_right)
-
-	# ---- LEFT COLUMN: BATTLE STATS ----
-	var bs_title = _make_label("BATTLE STATS", 18, Color(0.6, 0.6, 0.6))
-	bs_title.add_theme_font_override("font", _bangers_font)
-	col_left.add_child(bs_title)
-	col_left.add_child(_make_label("", 8))
-
-	# BATTLE MVP
-	col_left.add_child(_make_label("BATTLE MVP", 17, Color(1.0, 0.75, 0.2)))
-	col_left.add_child(_make_label("%s - %d kills" % [mvp.username, mvp.kills], 15))
-	col_left.add_child(_make_label("", 12))
-
-	# TOP KILLS THIS BATTLE
-	col_left.add_child(_make_label("TOP KILLS THIS BATTLE", 17, Color(0.7, 0.7, 0.7)))
-	for i in range(mini(5, all_players.size())):
-		var p = all_players[i]
-		col_left.add_child(_make_label("%d. %s - %d kills" % [i + 1, p.username, p.kills], 14))
-	col_left.add_child(_make_label("", 12))
-
-	# KILL KINGS
-	col_left.add_child(_make_label("KILL KINGS", 17, Color(0.75, 0.4, 0.15)))
-	if top_kills.size() > 0:
-		for i in range(top_kills.size()):
-			var p = top_kills[i]
-			col_left.add_child(_make_label("%d. %s - %d kills" % [i + 1, p.username, p.entry.session_kills], 14))
-
-	# ---- RIGHT COLUMN: SESSION STATS ----
-	var ss_title = _make_label("SESSION STATS", 18, Color(0.6, 0.6, 0.6))
-	ss_title.add_theme_font_override("font", _bangers_font)
-	col_right.add_child(ss_title)
-	col_right.add_child(_make_label("", 8))
-
-	# SESSION LEADERBOARD
-	col_right.add_child(_make_label("SESSION LEADERBOARD", 17, Color(0.7, 0.7, 0.7)))
-	if top_pts.size() > 0:
-		var sl_scroll = ScrollContainer.new()
-		sl_scroll.custom_minimum_size = Vector2(0, min(220, top_pts.size() * 22))
-		col_right.add_child(sl_scroll)
-		var sl_list = VBoxContainer.new()
-		sl_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		sl_list.add_theme_constant_override("separation", 2)
-		sl_scroll.add_child(sl_list)
-		for i in range(top_pts.size()):
-			var p = top_pts[i]
-			var e = p.entry
-			sl_list.add_child(_make_label(
-				"%d. %s - %d pts | %d wins | %d kills" % [i + 1, p.username, e.session_points, e.session_wins, e.session_kills],
-				14
-			))
-
-	col_right.add_child(_make_label("", 12))
-
-	# SESSION WINNERS
-	col_right.add_child(_make_label("SESSION WINNERS", 17, Color(0.7, 0.7, 0.7)))
-	if session_winners.size() > 0:
-		var sw_scroll = ScrollContainer.new()
-		sw_scroll.custom_minimum_size = Vector2(0, min(260, session_winners.size() * 22))
-		col_right.add_child(sw_scroll)
-		var sw_list = VBoxContainer.new()
-		sw_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		sw_list.add_theme_constant_override("separation", 2)
-		sw_scroll.add_child(sw_list)
-		for w in session_winners:
-			sw_list.add_child(_make_label("Battle %d: %s" % [w.battle_number, w.username], 14))
-
-	results_screen.visible = true
-	GameSettings.global_ranking = _global_ranking
-
-
-func _make_label(text: String, font_size: int, color: Color = Color.WHITE) -> Label:
-	var l = Label.new()
-	l.text = text
-	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	l.add_theme_font_size_override("font_size", font_size)
-	l.add_theme_color_override("font_color", color)
-	return l
-
-
-func _on_play_again():
-	get_tree().change_scene_to_file("res://scenes/Main.tscn")
-
-
-func _on_back_to_menu():
-	get_tree().change_scene_to_file("res://scenes/MainMenu.tscn")
+	if _match_results_ui and _match_results_ui.has_method("show_results"):
+		_match_results_ui.show_results({
+			winner = winner,
+			battle_time = _battle_time,
+			mvp = mvp,
+			all_players = all_players,
+			top_kills = top_kills,
+			top_pts = top_pts,
+			session_winners = session_winners,
+		})
 
 
 func _update_global_ranking(winner):

@@ -10,17 +10,8 @@ enabled = true
 
 [node name="CanvasLayer" type="CanvasLayer" parent="."]
 
-[node name="TitleLabel" type="Label" parent="CanvasLayer"]
-offset_left = 10.0
-offset_top = 10.0
-text = "Stream Battle Arena"
-
-[node name="FPSLabel" type="Label" parent="CanvasLayer"]
-offset_left = 10.0
-offset_top = 30.0
-text = "FPS: 0"
-
 [node name="AliveLabel" type="Label" parent="CanvasLayer"]
+visible = false
 offset_left = 10.0
 offset_top = 50.0
 text = "Alive: 0 / 300"

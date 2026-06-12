@@ -25,8 +25,8 @@ var attack_cooldown := 1.0
 var kills := 0
 var is_alive := true
 var current_target = null
-var target_direction := Vector2.RIGHT
-var _change_timer := 0.0
+var _wander_target := Vector2.RIGHT
+var _wander_timer := 0.0
 var _attack_timer := 0.0
 var _muzzle_flash_timer := 0.0
 var _hit_flash_timer := 0.0
@@ -40,9 +40,9 @@ var show_username := true:
 func _ready():
 	if player_color == Color.BLACK:
 		player_color = Color.from_hsv(randf(), 0.8, 0.9)
-	_change_timer = randf_range(2.0, 5.0)
+	_wander_timer = randf_range(1.5, 4.0)
 	_attack_timer = randf_range(0.0, attack_cooldown)
-	target_direction = Vector2(randf_range(-1, 1), randf_range(-1, 1)).normalized()
+	_wander_target = Vector2(randf_range(-1, 1), randf_range(-1, 1)).normalized()
 	_setup_username_label()
 	queue_redraw()
 
@@ -92,13 +92,13 @@ func die(_killer):
 	queue_redraw()
 
 
-func update_direction(delta: float):
+func update_movement(delta: float):
 	if not is_alive:
 		return
-	_change_timer -= delta
-	if _change_timer <= 0.0:
-		_change_timer = randf_range(2.0, 5.0)
-		target_direction = Vector2(randf_range(-1, 1), randf_range(-1, 1)).normalized()
+	_wander_timer -= delta
+	if _wander_timer <= 0.0:
+		_wander_timer = randf_range(1.5, 4.0)
+		_wander_target = Vector2(randf_range(-1, 1), randf_range(-1, 1)).normalized()
 
 	if _muzzle_flash_timer > 0.0:
 		_muzzle_flash_timer -= delta
@@ -106,7 +106,7 @@ func update_direction(delta: float):
 		_hit_flash_timer -= delta
 
 	var old_dir = direction
-	direction = direction.lerp(target_direction, 2.0 * delta).normalized()
+	direction = direction.lerp(_wander_target, 1.5 * delta).normalized()
 	if direction != old_dir or _muzzle_flash_timer > 0.0 or _hit_flash_timer > 0.0:
 		queue_redraw()
 
@@ -115,22 +115,19 @@ func _draw():
 	if not is_alive:
 		return
 
-	# Body with hit flash
 	var t = _hit_flash_timer / 0.22
 	var flash_amount = clamp(t * 0.35, 0.0, 0.35)
 	var body_color = player_color.lerp(Color.RED, flash_amount)
 	draw_circle(Vector2.ZERO, RADIUS, body_color)
 
-	# Cannon direction
 	var cannon_dir: Vector2
-	if current_target != null:
+	if current_target != null and is_instance_valid(current_target) and current_target.is_alive:
 		cannon_dir = (current_target.position - position).normalized()
 	else:
 		cannon_dir = direction.normalized()
 
 	draw_line(cannon_dir * RADIUS, cannon_dir * (RADIUS + CANNON_LENGTH), Color.WHITE, 3.0)
 
-	# Muzzle flash at cannon tip
 	if _muzzle_flash_timer > 0.0:
 		var tip = cannon_dir * (RADIUS + CANNON_LENGTH)
 		draw_circle(tip, 6.0, Color(1.0, 0.85, 0.15))

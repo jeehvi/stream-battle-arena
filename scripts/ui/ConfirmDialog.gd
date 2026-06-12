@@ -84,7 +84,7 @@ func _setup_ui():
 	vbox.add_child(title)
 
 	var spacer1 = Control.new()
-	spacer1.custom_minimum_size = Vector2(0, 16)
+	spacer1.custom_minimum_size = Vector2(0, 12)
 	vbox.add_child(spacer1)
 
 	var msg = Label.new()
@@ -92,8 +92,8 @@ func _setup_ui():
 	msg.text = "MESSAGE"
 	msg.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	msg.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	msg.add_theme_font_size_override("font_size", 22)
-	msg.add_theme_color_override("font_color", Color("#BDBDBD"))
+	msg.add_theme_font_size_override("font_size", 20)
+	msg.add_theme_color_override("font_color", Color("#9A9A9A"))
 	msg.custom_minimum_size = Vector2(0, 50)
 	msg.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	vbox.add_child(msg)

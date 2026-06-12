@@ -143,8 +143,8 @@ func _process(delta):
 func _spawn_fake_player():
 	var player = preload("res://scenes/Player.tscn").instantiate()
 	player.normalized_position = Vector2(randf(), randf())
-	player.direction = Vector2.ZERO
-	player.target_direction = Vector2.ZERO
+	player.direction = Vector2(randf_range(-1, 1), randf_range(-1, 1)).normalized()
+	player._wander_target = Vector2(randf_range(-1, 1), randf_range(-1, 1)).normalized()
 	player.username = "viewer_%03d" % (_next_player_index + 1)
 	player.show_username = true
 	player.setup_combat(_config)

@@ -5,23 +5,21 @@ const SettingsIcon = preload("res://scripts/ui/SettingsIcon.gd")
 const SettingsPanel = preload("res://scripts/ui/SettingsPanel.gd")
 const BattleArenaBannerScene = preload("res://scenes/ui/BattleArenaBanner.tscn")
 
-@onready var _connect_btn: Button = %ConnectButton
-@onready var _continue_btn: Button = %ContinueButton
-@onready var _status_label: Label = %StatusLabel
-@onready var _card_panel: Panel = %AuthCard
-@onready var _safe_area: MarginContainer = %SafeArea
+var _connect_btn: Button
+var _continue_btn: Button
+var _status_label: Label
+var _description_label: Label
+
+@onready var _card_panel: Variant = %AuthCard
+@onready var _ui_safe_area: MarginContainer = %SafeArea
 var _banner_section
 @onready var _auth_section: Control = %AuthSection
 @onready var _top_spacer: Control = %TopSpacer
 @onready var _banner_to_card_spacer: Control = %BannerToCardSpacer
-@onready var _twitch_icon: TextureRect = %TwitchIcon
-
-@onready var _twitch_title: Label = %TwitchTitle
-@onready var _auth_title: Label = %AuthTitle
-@onready var _description_label: Label = %DescriptionLabel
 @onready var _main_layout: VBoxContainer = %MainLayout
 @onready var _card_center: CenterContainer = %CardCenter
 @onready var _canvas_root: Control = %CanvasRoot
+@onready var _full_area: Control = %FullArea
 
 var _twitch_texture: Texture2D
 var _bangers_font: Font
@@ -33,14 +31,55 @@ func _ready():
 	GameSettings.load_settings()
 	GameSettings.apply_display_mode(GameSettings.display_mode)
 
+	_build_card_content()
 	_load_assets()
 	_apply_styles()
+	_card_panel.set_title("AUTHENTICATION")
+	_card_panel.set_content_separation(8)
 	_instantiate_banner()
-	_connect_btn.pressed.connect(_on_connect_pressed)
-	_continue_btn.pressed.connect(_on_continue_pressed)
+	if _connect_btn:
+		_connect_btn.pressed.connect(_on_connect_pressed)
+	if _continue_btn:
+		_continue_btn.pressed.connect(_on_continue_pressed)
 	get_viewport().size_changed.connect(_update_layout)
 	_update_layout()
 	_add_settings_icon()
+
+
+func _build_card_content():
+	var content = _card_panel.get_content()
+
+	_description_label = Label.new()
+	_description_label.name = "DescriptionLabel"
+	_description_label.text = "Sign in with your Twitch account to enter the arena."
+	_description_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_description_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	content.add_child(_description_label)
+
+	var btn_center = CenterContainer.new()
+	btn_center.name = "ButtonCenter"
+	btn_center.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	content.add_child(btn_center)
+
+	_connect_btn = StyledButton.new()
+	_connect_btn.name = "ConnectButton"
+	_connect_btn.text = "CONNECT TWITCH"
+	btn_center.add_child(_connect_btn)
+
+	_status_label = Label.new()
+	_status_label.name = "StatusLabel"
+	_status_label.text = "Not connected to Twitch"
+	_status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_status_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	content.add_child(_status_label)
+
+	_continue_btn = StyledButton.new()
+	_continue_btn.name = "ContinueButton"
+	_continue_btn.text = "CONTINUE"
+	_continue_btn.custom_minimum_size = Vector2(200, 0)
+	_continue_btn.visible = false
+	_continue_btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	content.add_child(_continue_btn)
 
 
 func _add_settings_icon():
@@ -51,7 +90,7 @@ func _add_settings_icon():
 			var panel = SettingsPanel.new()
 			add_child(panel)
 	)
-	add_child(icon)
+	_full_area.add_child(icon)
 
 
 func _instantiate_banner():
@@ -69,83 +108,20 @@ func _load_assets():
 		_twitch_texture = ImageTexture.create_from_image(twitch_img)
 	else:
 		_twitch_texture = twitch_tex
-	_twitch_icon.texture = _twitch_texture
-
 	_bangers_font = load("res://assets/fonts/Bangers-Regular.ttf")
 
 
 func _apply_styles():
-	_connect_btn.icon = _twitch_texture
+	if _connect_btn:
+		_connect_btn.icon = _twitch_texture
 
-	var auth_ls = LabelSettings.new()
-	auth_ls.font = _bangers_font
-	auth_ls.font_color = Color("#D4AF37")
-	auth_ls.font_size = 18
-	_auth_title.label_settings = auth_ls
+	if _description_label:
+		_description_label.add_theme_color_override("font_color", Color("#9A9A9A"))
+		_description_label.add_theme_font_size_override("font_size", 16)
 
-	_twitch_title.add_theme_color_override("font_color", Color("#FFFFFF"))
-	_twitch_title.add_theme_font_size_override("font_size", 22)
-
-	_description_label.add_theme_color_override("font_color", Color("#D0D0D0"))
-	_description_label.add_theme_font_size_override("font_size", 20)
-
-	_status_label.add_theme_color_override("font_color", Color("#C0C0C0"))
-	_status_label.add_theme_font_size_override("font_size", 18)
-
-	var card_style = StyleBoxFlat.new()
-	card_style.bg_color = Color("#171717")
-	card_style.border_color = Color("#8A6A1F")
-	card_style.border_width_left = 2
-	card_style.border_width_right = 2
-	card_style.border_width_top = 2
-	card_style.border_width_bottom = 2
-	card_style.corner_radius_top_left = 8
-	card_style.corner_radius_top_right = 8
-	card_style.corner_radius_bottom_left = 8
-	card_style.corner_radius_bottom_right = 8
-	card_style.content_margin_left = 32
-	card_style.content_margin_right = 32
-	card_style.content_margin_top = 32
-	card_style.content_margin_bottom = 32
-	card_style.shadow_color = Color(0, 0, 0, 0.35)
-	card_style.shadow_size = 6
-	_card_panel.add_theme_stylebox_override("panel", card_style)
-
-	_add_card_corner_marks(_card_panel)
-
-
-func _add_card_corner_marks(card: Panel):
-	var marks = Control.new()
-	marks.name = "CornerMarks"
-	marks.anchor_left = 0.0
-	marks.anchor_top = 0.0
-	marks.anchor_right = 1.0
-	marks.anchor_bottom = 1.0
-	marks.mouse_filter = Control.MOUSE_FILTER_PASS
-	marks.draw.connect(_on_corner_marks_draw)
-	card.add_child(marks)
-
-
-func _on_corner_marks_draw():
-	var marks = find_child("CornerMarks", true, true) as Control
-	if not marks:
-		return
-	var w = marks.size.x
-	var h = marks.size.y
-	if w <= 0 or h <= 0:
-		return
-	var gold = Color("#D4AF37")
-	var lw = 2.0
-	var arm = 14.0
-	var off = 6.0
-	marks.draw_line(Vector2(off, off), Vector2(off + arm, off), gold, lw)
-	marks.draw_line(Vector2(off, off), Vector2(off, off + arm), gold, lw)
-	marks.draw_line(Vector2(w - off, off), Vector2(w - off - arm, off), gold, lw)
-	marks.draw_line(Vector2(w - off, off), Vector2(w - off, off + arm), gold, lw)
-	marks.draw_line(Vector2(off, h - off), Vector2(off + arm, h - off), gold, lw)
-	marks.draw_line(Vector2(off, h - off), Vector2(off, h - off - arm), gold, lw)
-	marks.draw_line(Vector2(w - off, h - off), Vector2(w - off - arm, h - off), gold, lw)
-	marks.draw_line(Vector2(w - off, h - off), Vector2(w - off, h - off - arm), gold, lw)
+	if _status_label:
+		_status_label.add_theme_color_override("font_color", Color("#9A9A9A"))
+		_status_label.add_theme_font_size_override("font_size", 14)
 
 
 func _update_layout():
@@ -155,26 +131,21 @@ func _update_layout():
 	_canvas_root.scale = Vector2(factor, factor)
 	_canvas_root.position = Vector2.ZERO
 
-	_safe_area.add_theme_constant_override("margin_left", 80)
-	_safe_area.add_theme_constant_override("margin_right", 80)
-	_safe_area.add_theme_constant_override("margin_top", 54)
-	_safe_area.add_theme_constant_override("margin_bottom", 54)
-
 	if _banner_section != null and _banner_section.has_method("update_spacer_sizes"):
 		_banner_section.update_spacer_sizes()
 	else:
 		push_warning("BattleArenaBanner: missing update_spacer_sizes")
 
-	const CARD_PAD = 40.0
-	const CARD_SEP = 60.0
+	const CARD_PAD = 56.0
 	const AUTH_SIZE = 18.0
-	const TWITCH_ROW_H = 28.0
-	const DESC_SIZE = 22.0
+	const DESC_SIZE = 16.0
 	const BTN_H = 40.0
-	const STATUS_SIZE = 20.0
-	var continue_h = 0.0 if not _continue_btn.visible else 50.0
-	var card_items_h = AUTH_SIZE + 1.0 + TWITCH_ROW_H + DESC_SIZE + BTN_H + STATUS_SIZE + continue_h
-	var card_h = CARD_PAD + CARD_SEP + card_items_h
+	const STATUS_SIZE = 14.0
+	const SEPARATION = 8.0
+	var continue_h = 50.0 if _continue_btn and _continue_btn.visible else 0.0
+	var card_items_h = AUTH_SIZE + DESC_SIZE + BTN_H + STATUS_SIZE + continue_h
+	var card_gaps = (4.0 if continue_h > 0 else 3.0) * SEPARATION
+	var card_h = CARD_PAD + card_items_h + card_gaps
 
 	const GAP = 50.0
 	const TOP_SPACER_H = 75.6
@@ -184,11 +155,14 @@ func _update_layout():
 	_top_spacer.custom_minimum_size = Vector2(0, TOP_SPACER_H)
 	_banner_to_card_spacer.custom_minimum_size = Vector2(0, GAP)
 	_card_panel.custom_minimum_size = Vector2(CARD_WIDTH, 0)
-	_connect_btn.custom_minimum_size = Vector2(BUTTON_WIDTH, 0)
+	if _connect_btn:
+		_connect_btn.custom_minimum_size = Vector2(BUTTON_WIDTH, 0)
 	_auth_section.custom_minimum_size = Vector2(0, card_h)
 
 
 func _on_connect_pressed():
+	if not _status_label or not _connect_btn or not _continue_btn:
+		return
 	_status_label.text = "Connected as: TestStreamer"
 	_connect_btn.visible = false
 	_continue_btn.visible = true
@@ -207,7 +181,7 @@ func _print_centering_diagnostics():
 	var vp_cx = vp.x * 0.5
 
 	var entries = [
-		{ "name": "SafeArea",      "node": _safe_area },
+		{ "name": "UISafeArea",    "node": _ui_safe_area },
 		{ "name": "MainLayout",    "node": _main_layout },
 		{ "name": "BannerSection", "node": _banner_section },
 		{ "name": "AuthSection",   "node": _auth_section },

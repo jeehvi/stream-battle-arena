@@ -1,0 +1,78 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/MatchResults.gd" id="1"]
+[ext_resource type="Script" path="res://scripts/ui/UISafeArea.gd" id="2"]
+[ext_resource type="PackedScene" path="res://scenes/ui/BattleArenaBanner.tscn" id="3"]
+[ext_resource type="PackedScene" path="res://scenes/ui/DarkArenaCard.tscn" id="4"]
+[ext_resource type="Script" path="res://scripts/ui/StyledButton.gd" id="5"]
+[ext_resource type="Script" path="res://scripts/ui/SettingsIcon.gd" id="6"]
+
+[node name="MatchResults" type="Control"]
+script = ExtResource("1")
+anchor_left = 0.0
+anchor_top = 0.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+visible = false
+
+[node name="CanvasRoot" type="Control" parent="."]
+custom_minimum_size = Vector2(1920, 1080)
+offset_right = 1920.0
+offset_bottom = 1080.0
+mouse_filter = 2
+
+[node name="BackgroundImage" type="TextureRect" parent="CanvasRoot"]
+anchor_left = 0.0
+anchor_top = 0.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+expand_mode = 2
+stretch_mode = 5
+mouse_filter = 2
+
+[node name="UISafeArea" type="MarginContainer" parent="CanvasRoot"]
+script = ExtResource("2")
+anchor_left = 0.0
+anchor_top = 0.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="MainLayout" type="VBoxContainer" parent="CanvasRoot/UISafeArea"]
+anchor_left = 0.0
+anchor_top = 0.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+
+[node name="TopSpacer" type="Control" parent="CanvasRoot/UISafeArea/MainLayout"]
+custom_minimum_size = Vector2(0, 20)
+
+[node name="ResultsBanner" parent="CanvasRoot/UISafeArea/MainLayout" instance=ExtResource("3")]
+
+[node name="BannerToCardSpacer" type="Control" parent="CanvasRoot/UISafeArea/MainLayout"]
+custom_minimum_size = Vector2(0, 24)
+
+[node name="CardArea" type="CenterContainer" parent="CanvasRoot/UISafeArea/MainLayout"]
+size_flags_horizontal = 3
+
+[node name="ResultsCard" parent="CanvasRoot/UISafeArea/MainLayout/CardArea" instance=ExtResource("4")]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(560, 0)
+
+[node name="ActionButtons" type="HBoxContainer" parent="CanvasRoot/UISafeArea/MainLayout"]
+alignment = 1
+custom_minimum_size = Vector2(0, 80)
+theme_override_constants/separation = 24
+
+[node name="PlayAgain" type="Button" parent="CanvasRoot/UISafeArea/MainLayout/ActionButtons"]
+script = ExtResource("5")
+unique_name_in_owner = true
+text = "PLAY AGAIN"
+
+[node name="BackToMenu" type="Button" parent="CanvasRoot/UISafeArea/MainLayout/ActionButtons"]
+script = ExtResource("5")
+unique_name_in_owner = true
+text = "MAIN MENU"
+
+[node name="ResultsSettingsIcon" type="Control" parent="CanvasRoot"]
+script = ExtResource("6")
+unique_name_in_owner = true
