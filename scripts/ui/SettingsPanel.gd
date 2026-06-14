@@ -1,9 +1,10 @@
 extends Control
 
 const StyledButton = preload("res://scripts/ui/StyledButton.gd")
+const DarkArenaCardScene = preload("res://scenes/ui/DarkArenaCard.tscn")
 
-var _volume_slider: HSlider
-var _volume_value_label: Label
+var _volume_sliders := {}
+var _volume_value_labels := {}
 var _display_mode: OptionButton
 var _save_btn: Button
 var _save_feedback: Label
@@ -16,9 +17,11 @@ func _init():
 
 
 func _load_ui_values():
-	_volume_slider.value = GameSettings.master_volume
-	_volume_value_label.text = "%d%%" % clampi(roundi(GameSettings.master_volume), 0, 100)
-	_display_mode.selected = GameSettings.display_mode
+	_set_volume_ui("master", GameSettings.master_volume)
+	_set_volume_ui("music", GameSettings.music_volume)
+	_set_volume_ui("ui", GameSettings.ui_volume)
+	_set_volume_ui("battle", GameSettings.battle_volume)
+	_display_mode.selected = clampi(GameSettings.display_mode, 0, 2)
 
 
 func _setup_ui():
@@ -36,54 +39,58 @@ func _setup_ui():
 	bg.color = Color("#000000")
 	add_child(bg)
 
-	var center = VBoxContainer.new()
+	var center = CenterContainer.new()
 	center.name = "Center"
-	center.anchor_left = 0.5
-	center.anchor_top = 0.5
-	center.anchor_right = 0.5
-	center.anchor_bottom = 0.5
-	center.offset_left = -220.0
-	center.offset_top = -200.0
-	center.offset_right = 220.0
-	center.offset_bottom = 200.0
-	center.alignment = BoxContainer.ALIGNMENT_CENTER
-	center.add_theme_constant_override("separation", 0)
+	center.anchor_left = 0.0
+	center.anchor_top = 0.0
+	center.anchor_right = 1.0
+	center.anchor_bottom = 1.0
 	add_child(center)
 
-	var title = Label.new()
-	title.text = "SETTINGS"
-	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override("font_size", 48)
-	center.add_child(title)
+	var card = DarkArenaCardScene.instantiate()
+	card.name = "SettingsCard"
+	card.custom_minimum_size = Vector2(660, 0)
+	center.add_child(card)
+	card.set_title("SETTINGS")
+	card.set_title_font_size(30)
+	card.set_padding(44, 34, 44, 34)
+	card.set_content_separation(0)
 
-	center.add_child(_spacer(32))
+	var content = card.get_content()
+	content.alignment = BoxContainer.ALIGNMENT_CENTER
 
 	var audio_title = Label.new()
 	audio_title.text = "AUDIO"
 	audio_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	audio_title.add_theme_font_size_override("font_size", 24)
 	audio_title.add_theme_color_override("font_color", Color("#CCCCCC"))
-	center.add_child(audio_title)
+	content.add_child(audio_title)
 
-	center.add_child(_spacer(12))
-	center.add_child(_build_volume_row())
-	center.add_child(_spacer(24))
+	content.add_child(_spacer(14))
+	content.add_child(_build_volume_row("master", "Master Volume"))
+	content.add_child(_spacer(8))
+	content.add_child(_build_volume_row("music", "Music Volume"))
+	content.add_child(_spacer(8))
+	content.add_child(_build_volume_row("ui", "UI Volume"))
+	content.add_child(_spacer(8))
+	content.add_child(_build_volume_row("battle", "Battle Volume"))
+	content.add_child(_spacer(24))
 
 	var display_title = Label.new()
 	display_title.text = "DISPLAY"
 	display_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	display_title.add_theme_font_size_override("font_size", 24)
 	display_title.add_theme_color_override("font_color", Color("#CCCCCC"))
-	center.add_child(display_title)
+	content.add_child(display_title)
 
-	center.add_child(_spacer(12))
-	center.add_child(_build_display_row())
-	center.add_child(_spacer(24))
+	content.add_child(_spacer(14))
+	content.add_child(_build_display_row())
+	content.add_child(_spacer(24))
 
 	var btn_row = HBoxContainer.new()
 	btn_row.alignment = BoxContainer.ALIGNMENT_CENTER
-	btn_row.add_theme_constant_override("separation", 16)
-	center.add_child(btn_row)
+	btn_row.add_theme_constant_override("separation", 18)
+	content.add_child(btn_row)
 
 	_save_btn = StyledButton.new()
 	_save_btn.text = "SAVE"
@@ -101,41 +108,44 @@ func _setup_ui():
 	_save_feedback.add_theme_color_override("font_color", Color("#4CAF50"))
 	_save_feedback.add_theme_font_size_override("font_size", 20)
 	_save_feedback.custom_minimum_size = Vector2(0, 28)
-	center.add_child(_save_feedback)
+	content.add_child(_save_feedback)
 
 
-func _build_volume_row() -> HBoxContainer:
+func _build_volume_row(id: String, text: String) -> HBoxContainer:
 	var row = HBoxContainer.new()
-	row.name = "VolumeRow"
+	row.name = "%sVolumeRow" % id.capitalize()
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
 	row.add_theme_constant_override("separation", 12)
 
 	var label = Label.new()
-	label.text = "Master Volume"
+	label.text = text
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	label.custom_minimum_size = Vector2(130, 30)
+	label.custom_minimum_size = Vector2(150, 34)
 	row.add_child(label)
 
-	_volume_slider = HSlider.new()
-	_volume_slider.name = "VolumeSlider"
-	_volume_slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_volume_slider.custom_minimum_size = Vector2(120, 30)
-	_volume_slider.min_value = 0.0
-	_volume_slider.max_value = 100.0
-	_volume_slider.step = 1.0
-	_style_slider(_volume_slider)
-	_volume_slider.value_changed.connect(_on_volume_changed)
-	row.add_child(_volume_slider)
+	var slider = HSlider.new()
+	slider.name = "%sVolumeSlider" % id.capitalize()
+	slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	slider.custom_minimum_size = Vector2(220, 34)
+	slider.min_value = 0.0
+	slider.max_value = 100.0
+	slider.step = 1.0
+	_style_slider(slider)
+	slider.value_changed.connect(_on_volume_changed.bind(id))
+	row.add_child(slider)
 
-	_volume_value_label = Label.new()
-	_volume_value_label.name = "VolumeValue"
-	_volume_value_label.text = "80%"
-	_volume_value_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
-	_volume_value_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	_volume_value_label.custom_minimum_size = Vector2(40, 30)
-	_volume_value_label.add_theme_color_override("font_color", Color("#D4AF37"))
-	row.add_child(_volume_value_label)
+	var value_label = Label.new()
+	value_label.name = "%sVolumeValue" % id.capitalize()
+	value_label.text = "80%"
+	value_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	value_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	value_label.custom_minimum_size = Vector2(48, 34)
+	value_label.add_theme_color_override("font_color", Color("#D4AF37"))
+	row.add_child(value_label)
+
+	_volume_sliders[id] = slider
+	_volume_value_labels[id] = value_label
 
 	return row
 
@@ -150,13 +160,13 @@ func _build_display_row() -> HBoxContainer:
 	label.text = "Display Mode"
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	label.custom_minimum_size = Vector2(130, 30)
+	label.custom_minimum_size = Vector2(150, 34)
 	row.add_child(label)
 
 	_display_mode = OptionButton.new()
 	_display_mode.name = "DisplayMode"
 	_display_mode.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_display_mode.custom_minimum_size = Vector2(120, 30)
+	_display_mode.custom_minimum_size = Vector2(238, 34)
 	_display_mode.add_item("Borderless Fullscreen", 0)
 	_display_mode.add_item("Windowed 1280x720", 1)
 	_display_mode.add_item("Windowed 1600x900", 2)
@@ -239,15 +249,20 @@ func _style_option_button(btn: OptionButton):
 	btn.get_popup().add_theme_stylebox_override("panel", popup_bg)
 
 
-func _on_volume_changed(value: float):
+func _on_volume_changed(value: float, id: String):
 	var pct = clampi(roundi(value), 0, 100)
-	_volume_value_label.text = "%d%%" % pct
+	if _volume_value_labels.has(id):
+		_volume_value_labels[id].text = "%d%%" % pct
 
 
 func _on_save_pressed():
-	GameSettings.master_volume = _volume_slider.value
+	GameSettings.master_volume = _get_volume_value("master")
+	GameSettings.music_volume = _get_volume_value("music")
+	GameSettings.ui_volume = _get_volume_value("ui")
+	GameSettings.battle_volume = _get_volume_value("battle")
 	GameSettings.display_mode = _display_mode.selected
 	GameSettings.save_settings()
+	GameSettings.apply_audio_settings()
 	GameSettings.apply_display_mode(GameSettings.display_mode)
 	_save_feedback.text = "Settings saved"
 	_save_btn.disabled = true
@@ -260,6 +275,19 @@ func _spacer(height: int) -> Control:
 	var s = Control.new()
 	s.custom_minimum_size = Vector2(0, height)
 	return s
+
+
+func _set_volume_ui(id: String, value: float):
+	if not _volume_sliders.has(id) or not _volume_value_labels.has(id):
+		return
+	_volume_sliders[id].value = value
+	_volume_value_labels[id].text = "%d%%" % clampi(roundi(value), 0, 100)
+
+
+func _get_volume_value(id: String) -> float:
+	if not _volume_sliders.has(id):
+		return 80.0
+	return _volume_sliders[id].value
 
 
 func _on_back_pressed():

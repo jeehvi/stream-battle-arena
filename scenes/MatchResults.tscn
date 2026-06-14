@@ -2,7 +2,6 @@
 
 [ext_resource type="Script" path="res://scripts/MatchResults.gd" id="1"]
 [ext_resource type="Script" path="res://scripts/ui/UISafeArea.gd" id="2"]
-[ext_resource type="PackedScene" path="res://scenes/ui/BattleArenaBanner.tscn" id="3"]
 [ext_resource type="PackedScene" path="res://scenes/ui/DarkArenaCard.tscn" id="4"]
 [ext_resource type="Script" path="res://scripts/ui/StyledButton.gd" id="5"]
 [ext_resource type="Script" path="res://scripts/ui/SettingsIcon.gd" id="6"]
@@ -45,11 +44,6 @@ anchor_bottom = 1.0
 
 [node name="TopSpacer" type="Control" parent="CanvasRoot/UISafeArea/MainLayout"]
 custom_minimum_size = Vector2(0, 20)
-
-[node name="ResultsBanner" parent="CanvasRoot/UISafeArea/MainLayout" instance=ExtResource("3")]
-
-[node name="BannerToCardSpacer" type="Control" parent="CanvasRoot/UISafeArea/MainLayout"]
-custom_minimum_size = Vector2(0, 24)
 
 [node name="CardArea" type="CenterContainer" parent="CanvasRoot/UISafeArea/MainLayout"]
 size_flags_horizontal = 3

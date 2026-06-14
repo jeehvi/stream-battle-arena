@@ -5,6 +5,11 @@ var _title_section: VBoxContainer
 var _title_label: Label
 var _content: VBoxContainer
 var _padding: MarginContainer
+var _pending_title := ""
+var _pending_padding := Rect2(36, 32, 36, 32)
+var _pending_title_font_size := 20
+var _pending_content_separation := 6
+var _built := false
 
 const BANGERS = preload("res://assets/fonts/Bangers-Regular.ttf")
 
@@ -19,14 +24,23 @@ func _get_minimum_size() -> Vector2:
 
 
 func _ready():
-	_build_structure()
-	_apply_style()
+	_ensure_structure()
+	if _pending_title.length() > 0:
+		set_title(_pending_title)
 	var m = find_child("CornerMarks", true, false) as Control
 	if m:
 		m.queue_redraw()
 	var d = find_child("CardDivider", true, false) as Control
 	if d:
 		d.queue_redraw()
+
+
+func _ensure_structure():
+	if _built:
+		return
+	_built = true
+	_build_structure()
+	_apply_style()
 
 
 func _build_structure():
@@ -76,24 +90,25 @@ func _build_structure():
 	_title_section.add_child(_title_label)
 
 	var title_spacer = Control.new()
-	title_spacer.custom_minimum_size = Vector2(0, 8)
+	title_spacer.custom_minimum_size = Vector2(0, 10)
 	_title_section.add_child(title_spacer)
 
 	var divider = Control.new()
 	divider.name = "CardDivider"
-	divider.custom_minimum_size = Vector2(0, 16)
+	divider.custom_minimum_size = Vector2(0, 18)
 	divider.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	divider.draw.connect(_on_card_divider_draw)
 	_title_section.add_child(divider)
 
 	var content_spacer = Control.new()
-	content_spacer.custom_minimum_size = Vector2(0, 12)
+	content_spacer.custom_minimum_size = Vector2(0, 16)
 	layout.add_child(content_spacer)
 
 	_content = VBoxContainer.new()
 	_content.name = "CardContent"
 	_content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_content.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_content.add_theme_constant_override("separation", _pending_content_separation)
 	layout.add_child(_content)
 
 
@@ -117,16 +132,22 @@ func _apply_style():
 	s.shadow_size = 6
 	add_theme_stylebox_override("panel", s)
 
-	_padding.add_theme_constant_override("margin_left", 32)
-	_padding.add_theme_constant_override("margin_right", 32)
-	_padding.add_theme_constant_override("margin_top", 28)
-	_padding.add_theme_constant_override("margin_bottom", 28)
+	_apply_padding()
 
 	var title_ls = LabelSettings.new()
 	title_ls.font = BANGERS
 	title_ls.font_color = Color("#D4AF37")
-	title_ls.font_size = 18
+	title_ls.font_size = _pending_title_font_size
 	_title_label.label_settings = title_ls
+
+
+func _apply_padding():
+	if not _padding:
+		return
+	_padding.add_theme_constant_override("margin_left", int(_pending_padding.position.x))
+	_padding.add_theme_constant_override("margin_top", int(_pending_padding.position.y))
+	_padding.add_theme_constant_override("margin_right", int(_pending_padding.size.x))
+	_padding.add_theme_constant_override("margin_bottom", int(_pending_padding.size.y))
 
 
 func _on_card_divider_draw():
@@ -178,16 +199,35 @@ func _on_corner_marks_draw():
 
 
 func set_title(text: String):
+	_pending_title = text
+	_ensure_structure()
 	if _title_label == null:
-		push_error("NULL TEXT TARGET in DarkArenaCard.set_title: _title_label")
 		return
 	_title_label.text = text
 	_title_section.visible = text.length() > 0
 
 
 func get_content() -> VBoxContainer:
+	_ensure_structure()
 	return _content
 
 
 func set_content_separation(px: int):
+	_pending_content_separation = px
+	_ensure_structure()
+	if not _content:
+		return
 	_content.add_theme_constant_override("separation", px)
+
+
+func set_padding(left: int, top: int, right: int, bottom: int):
+	_pending_padding = Rect2(left, top, right, bottom)
+	_ensure_structure()
+	_apply_padding()
+
+
+func set_title_font_size(px: int):
+	_pending_title_font_size = px
+	_ensure_structure()
+	if _title_label and _title_label.label_settings:
+		_title_label.label_settings.font_size = px

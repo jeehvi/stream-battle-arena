@@ -3,6 +3,8 @@ extends Node2D
 const StyledButton = preload("res://scripts/ui/StyledButton.gd")
 const SettingsPanel = preload("res://scripts/ui/SettingsPanel.gd")
 const ConfirmDialog = preload("res://scripts/ui/ConfirmDialog.gd")
+const DevConfig = preload("res://scripts/DevConfig.gd")
+const DarkArenaCardScene = preload("res://scenes/ui/DarkArenaCard.tscn")
 
 const SCREEN_PADDING := 80.0
 const PLAYER_SPEED := 60.0
@@ -292,39 +294,35 @@ func _setup_ui():
 	pdim.color = Color(0, 0, 0, 0.65)
 	_pause_overlay.add_child(pdim)
 
-	var pcenter = VBoxContainer.new()
+	var pcenter = CenterContainer.new()
 	pcenter.name = "Center"
-	pcenter.anchor_left = 0.5
-	pcenter.anchor_top = 0.5
-	pcenter.anchor_right = 0.5
-	pcenter.anchor_bottom = 0.5
-	pcenter.offset_left = -200.0
-	pcenter.offset_top = -180.0
-	pcenter.offset_right = 200.0
-	pcenter.offset_bottom = 180.0
-	pcenter.alignment = BoxContainer.ALIGNMENT_CENTER
-	pcenter.add_theme_constant_override("separation", 0)
+	pcenter.anchor_left = 0.0
+	pcenter.anchor_top = 0.0
+	pcenter.anchor_right = 1.0
+	pcenter.anchor_bottom = 1.0
 	_pause_overlay.add_child(pcenter)
 
-	var ptitle = Label.new()
-	ptitle.name = "PauseTitle"
-	ptitle.text = "BATTLE PAUSED"
-	ptitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	ptitle.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	ptitle.add_theme_font_size_override("font_size", 56)
-	ptitle.custom_minimum_size = Vector2(0, 80)
-	pcenter.add_child(ptitle)
+	var pause_card = DarkArenaCardScene.instantiate()
+	pause_card.name = "PauseCard"
+	pause_card.custom_minimum_size = Vector2(520, 0)
+	pcenter.add_child(pause_card)
+	pause_card.set_title("BATTLE PAUSED")
+	pause_card.set_title_font_size(34)
+	pause_card.set_padding(42, 36, 42, 36)
+	pause_card.set_content_separation(0)
 
-	pcenter.add_child(_pspacer(32))
+	var pause_content = pause_card.get_content()
+	pause_content.alignment = BoxContainer.ALIGNMENT_CENTER
+	pause_content.add_child(_pspacer(4))
 
 	var presume_btn = StyledButton.new()
 	presume_btn.name = "ResumeButton"
 	presume_btn.text = "RESUME BATTLE"
 	presume_btn.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	presume_btn.pressed.connect(_resume_battle)
-	pcenter.add_child(presume_btn)
+	pause_content.add_child(presume_btn)
 
-	pcenter.add_child(_pspacer(16))
+	pause_content.add_child(_pspacer(18))
 
 	var psettings_btn = StyledButton.new()
 	psettings_btn.name = "PauseSettingsButton"
@@ -335,25 +333,26 @@ func _setup_ui():
 			var panel = SettingsPanel.new()
 			canvas_layer.add_child(panel)
 	)
-	pcenter.add_child(psettings_btn)
+	pause_content.add_child(psettings_btn)
 
-	pcenter.add_child(_pspacer(32))
+	pause_content.add_child(_pspacer(4))
 
-	speed_toggle_button = Button.new()
-	speed_toggle_button.name = "SpeedToggleButton"
-	speed_toggle_button.text = "SPEED x1"
-	speed_toggle_button.anchor_left = 0.0
-	speed_toggle_button.anchor_top = 1.0
-	speed_toggle_button.anchor_right = 0.0
-	speed_toggle_button.anchor_bottom = 1.0
-	speed_toggle_button.offset_left = 10.0
-	speed_toggle_button.offset_top = -40.0
-	speed_toggle_button.offset_right = 110.0
-	speed_toggle_button.offset_bottom = -10.0
-	speed_toggle_button.add_theme_font_size_override("font_size", 14)
-	speed_toggle_button.visible = false
-	speed_toggle_button.pressed.connect(_on_speed_toggle)
-	canvas_layer.add_child(speed_toggle_button)
+	if DevConfig.DEV_MODE:
+		speed_toggle_button = Button.new()
+		speed_toggle_button.name = "SpeedToggleButton"
+		speed_toggle_button.text = "SPEED x1"
+		speed_toggle_button.anchor_left = 0.0
+		speed_toggle_button.anchor_top = 1.0
+		speed_toggle_button.anchor_right = 0.0
+		speed_toggle_button.anchor_bottom = 1.0
+		speed_toggle_button.offset_left = 10.0
+		speed_toggle_button.offset_top = -40.0
+		speed_toggle_button.offset_right = 110.0
+		speed_toggle_button.offset_bottom = -10.0
+		speed_toggle_button.add_theme_font_size_override("font_size", 14)
+		speed_toggle_button.visible = false
+		speed_toggle_button.pressed.connect(_on_speed_toggle)
+		canvas_layer.add_child(speed_toggle_button)
 
 
 func _pause_battle():
@@ -563,7 +562,7 @@ func _process(delta):
 				_showdown_threshold = 5 if _initial_player_count < 50 else 10
 				alive_label.visible = true
 				battle_speed_multiplier = 1.0
-				if speed_toggle_button:
+				if DevConfig.DEV_MODE and speed_toggle_button:
 					speed_toggle_button.text = "SPEED x1"
 					speed_toggle_button.visible = true
 				_grant_early_boost()
@@ -703,7 +702,8 @@ func _move_players(delta):
 						duration = dur,
 						has_applied_damage = false
 					})
-					print("Bullet Created | shooter=%s target=%s dist=%.1f dur=%.3f" % [child.username, victim.username, dist, dur])
+					if DevConfig.DEBUG_BULLETS:
+						print("Bullet Created | shooter=%s target=%s dist=%.1f dur=%.3f" % [child.username, victim.username, dist, dur])
 					child.fire()
 			child.queue_redraw()
 
@@ -777,13 +777,15 @@ func _update_bullets(delta):
 	_bullet_debug_timer += delta
 	if _bullet_debug_timer >= 5.0:
 		_bullet_debug_timer = 0.0
-		print("Active bullets count: %d" % _bullets.size())
+		if DevConfig.DEBUG_BULLETS:
+			print("Active bullets count: %d" % _bullets.size())
 
 	var modified := false
 
 	if _battle_state != STATE_PLAYING:
 		if _bullets.size() > 0:
-			print("Bullet Cleanup | reason=battle_end/showdown count=%d" % _bullets.size())
+			if DevConfig.DEBUG_BULLETS:
+				print("Bullet Cleanup | reason=battle_end/showdown count=%d" % _bullets.size())
 			_bullets.clear()
 			modified = true
 		if modified:
@@ -794,13 +796,15 @@ func _update_bullets(delta):
 		var b = _bullets[i]
 
 		if not is_instance_valid(b.target_player):
-			print("Bullet Removed | reason=invalid_target target=invalid")
+			if DevConfig.DEBUG_BULLETS:
+				print("Bullet Removed | reason=invalid_target target=invalid")
 			_bullets.remove_at(i)
 			modified = true
 			continue
 
 		if not b.target_player.is_alive:
-			print("Bullet Removed | reason=target_dead target=%s" % b.target_player.username)
+			if DevConfig.DEBUG_BULLETS:
+				print("Bullet Removed | reason=target_dead target=%s" % b.target_player.username)
 			_bullets.remove_at(i)
 			modified = true
 			continue
@@ -812,7 +816,8 @@ func _update_bullets(delta):
 		if progress >= 1.0:
 			if not b.has_applied_damage:
 				b.has_applied_damage = true
-				print("Bullet Impact | target=%s elapsed=%.3f" % [b.target_player.username, b.elapsed_time])
+				if DevConfig.DEBUG_BULLETS:
+					print("Bullet Impact | target=%s elapsed=%.3f" % [b.target_player.username, b.elapsed_time])
 				b.target_player.take_damage(b.damage, b.attacker)
 				if not b.target_player.is_alive:
 					_add_killfeed(b.attacker.username, b.target_player.username)

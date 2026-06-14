@@ -4,6 +4,7 @@ const StyledButton = preload("res://scripts/ui/StyledButton.gd")
 const SettingsIcon = preload("res://scripts/ui/SettingsIcon.gd")
 const SettingsPanel = preload("res://scripts/ui/SettingsPanel.gd")
 const BattleArenaBannerScene = preload("res://scenes/ui/BattleArenaBanner.tscn")
+const DevConfig = preload("res://scripts/DevConfig.gd")
 
 var _connect_btn: Button
 var _continue_btn: Button
@@ -35,7 +36,8 @@ func _ready():
 	_load_assets()
 	_apply_styles()
 	_card_panel.set_title("AUTHENTICATION")
-	_card_panel.set_content_separation(8)
+	_card_panel.set_padding(40, 34, 40, 34)
+	_card_panel.set_content_separation(12)
 	_instantiate_banner()
 	if _connect_btn:
 		_connect_btn.pressed.connect(_on_connect_pressed)
@@ -54,6 +56,7 @@ func _build_card_content():
 	_description_label.text = "Sign in with your Twitch account to enter the arena."
 	_description_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_description_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_description_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	content.add_child(_description_label)
 
 	var btn_center = CenterContainer.new()
@@ -122,6 +125,7 @@ func _apply_styles():
 	if _status_label:
 		_status_label.add_theme_color_override("font_color", Color("#9A9A9A"))
 		_status_label.add_theme_font_size_override("font_size", 14)
+		_status_label.custom_minimum_size = Vector2(0, 24)
 
 
 func _update_layout():
@@ -136,12 +140,12 @@ func _update_layout():
 	else:
 		push_warning("BattleArenaBanner: missing update_spacer_sizes")
 
-	const CARD_PAD = 56.0
+	const CARD_PAD = 68.0
 	const AUTH_SIZE = 18.0
 	const DESC_SIZE = 16.0
 	const BTN_H = 40.0
 	const STATUS_SIZE = 14.0
-	const SEPARATION = 8.0
+	const SEPARATION = 12.0
 	var continue_h = 50.0 if _continue_btn and _continue_btn.visible else 0.0
 	var card_items_h = AUTH_SIZE + DESC_SIZE + BTN_H + STATUS_SIZE + continue_h
 	var card_gaps = (4.0 if continue_h > 0 else 3.0) * SEPARATION
@@ -149,8 +153,8 @@ func _update_layout():
 
 	const GAP = 50.0
 	const TOP_SPACER_H = 75.6
-	const CARD_WIDTH = 560.0
-	const BUTTON_WIDTH = 420.0
+	const CARD_WIDTH = 600.0
+	const BUTTON_WIDTH = 440.0
 
 	_top_spacer.custom_minimum_size = Vector2(0, TOP_SPACER_H)
 	_banner_to_card_spacer.custom_minimum_size = Vector2(0, GAP)
@@ -174,6 +178,9 @@ func _on_continue_pressed():
 
 
 func _print_centering_diagnostics():
+	if not DevConfig.DEBUG_LAYOUT:
+		return
+
 	await get_tree().process_frame
 	await get_tree().process_frame
 
